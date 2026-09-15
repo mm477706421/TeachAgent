@@ -1,0 +1,8 @@
+:root {
+  --canvas: #f6f8f1;
+  --ink: #344c36;
+  --muted: #9aa68e;
+  --green: #244f39;
+  --ease: cubic-bezier(0.22, 0.68, 0, 1.02);
+  color-scheme: light;
+}

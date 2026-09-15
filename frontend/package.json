@@ -1,0 +1,29 @@
+{
+  "name": "teachagent-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test:e2e": "playwright test",
+    "format": "prettier --write src e2e *.ts *.json",
+    "format:check": "prettier --check src e2e *.ts *.json"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "prettier": "^3.6.2",
+    "typescript": "~5.7.3",
+    "vite": "^6.3.5"
+  }
+}

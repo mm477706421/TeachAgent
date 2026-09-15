@@ -1,0 +1,657 @@
+{
+  "id": "demo-math",
+  "user_id": "demo",
+  "title": "二次函数的图像与性质",
+  "subject": "数学",
+  "class_name": "九年级 · 三班",
+  "status": "completed",
+  "progress": 100,
+  "stage": "分析完成",
+  "duration": 2455.0,
+  "example": 1,
+  "created": 1789434000,
+  "metrics": {
+    "characters": 547,
+    "segments": 26,
+    "questions": 4,
+    "interactions": 1,
+    "speech_rate": 16,
+    "labeled_student_segments": 3
+  },
+  "analysis": {
+    "version": "1.0",
+    "engine": "local-text-rules",
+    "duration": 2455.0,
+    "summary": "本课共整理 26 个话语片段，识别到 4 处提问线索、1 处互动邀请。主要环节为「知识讲授」，可结合原文证据回看教学节奏。",
+    "metrics": {
+      "characters": 547,
+      "segments": 26,
+      "questions": 4,
+      "interactions": 1,
+      "speech_rate": 16,
+      "labeled_student_segments": 3
+    },
+    "segments": [
+      {
+        "start": 0.0,
+        "end": 80.0,
+        "text": "教师：同学们好，今天我们从生活中的抛物线开始，认识二次函数。",
+        "timing": "provided",
+        "id": 1,
+        "speaker": "teacher",
+        "stage": "课堂导入",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 95.0,
+        "end": 175.0,
+        "text": "教师：回顾上节课学习的一次函数，它的图像有什么特点？",
+        "timing": "provided",
+        "id": 2,
+        "speaker": "teacher",
+        "stage": "课堂导入",
+        "question": true,
+        "interaction": false
+      },
+      {
+        "start": 190.0,
+        "end": 270.0,
+        "text": "学生：一次函数的图像是一条直线。",
+        "timing": "provided",
+        "id": 3,
+        "speaker": "student",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 285.0,
+        "end": 365.0,
+        "text": "教师：那么，如果把一次项变成平方项，图像会发生什么变化？",
+        "timing": "provided",
+        "id": 4,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": true,
+        "interaction": false
+      },
+      {
+        "start": 380.0,
+        "end": 460.0,
+        "text": "教师：请观察函数 y=x² 的表达式，自变量可以取任意实数。",
+        "timing": "provided",
+        "id": 5,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 475.0,
+        "end": 555.0,
+        "text": "教师：我们先建立平面直角坐标系，标出横轴与纵轴的单位。",
+        "timing": "provided",
+        "id": 6,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 570.0,
+        "end": 650.0,
+        "text": "教师：然后，取 -3 到 3 的整数，分别求出对应的函数值。",
+        "timing": "provided",
+        "id": 7,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 665.0,
+        "end": 745.0,
+        "text": "教师：那么，将这些点在坐标系中描出，注意坐标的正负号。",
+        "timing": "provided",
+        "id": 8,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 760.0,
+        "end": 840.0,
+        "text": "教师：用平滑的曲线连接这些点，就得到一条抛物线。",
+        "timing": "provided",
+        "id": 9,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 855.0,
+        "end": 935.0,
+        "text": "教师：那么，这条曲线具有轴对称的性质，对称轴是 y 轴。",
+        "timing": "provided",
+        "id": 10,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 950.0,
+        "end": 1030.0,
+        "text": "教师：当 x=0 时，函数取到最小值，原点称为顶点。",
+        "timing": "provided",
+        "id": 11,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1045.0,
+        "end": 1125.0,
+        "text": "教师：然后，我们观察 y=2x² 与 y=x² 的差异。",
+        "timing": "provided",
+        "id": 12,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1140.0,
+        "end": 1220.0,
+        "text": "教师：系数绝对值增大，抛物线的开口变窄，这一点要注意。",
+        "timing": "provided",
+        "id": 13,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1235.0,
+        "end": 1315.0,
+        "text": "教师：接下来比较 y=-x²，开口方向向下，对不对？",
+        "timing": "provided",
+        "id": 14,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": true,
+        "interaction": false
+      },
+      {
+        "start": 1330.0,
+        "end": 1410.0,
+        "text": "教师：那么，系数的正负决定开口方向，绝对值影响开口大小。",
+        "timing": "provided",
+        "id": 15,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1425.0,
+        "end": 1505.0,
+        "text": "教师：在顶点左侧和右侧，函数值的变化趋势不同。",
+        "timing": "provided",
+        "id": 16,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1520.0,
+        "end": 1600.0,
+        "text": "教师：我们可以通过列表、描点、连线三个步骤作图。",
+        "timing": "provided",
+        "id": 17,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1615.0,
+        "end": 1695.0,
+        "text": "教师：那么，请独立完成练习一，画出 y=0.5x² 的图像。",
+        "timing": "provided",
+        "id": 18,
+        "speaker": "teacher",
+        "stage": "练习巩固",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1710.0,
+        "end": 1790.0,
+        "text": "学生：老师，我画的图像比 y=x² 更宽。",
+        "timing": "provided",
+        "id": 19,
+        "speaker": "student",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1805.0,
+        "end": 1885.0,
+        "text": "教师：这个观察很好。你认为是什么决定了开口大小？请分享依据。",
+        "timing": "provided",
+        "id": 20,
+        "speaker": "teacher",
+        "stage": "探究互动",
+        "question": true,
+        "interaction": true
+      },
+      {
+        "start": 1900.0,
+        "end": 1980.0,
+        "text": "学生：系数的绝对值小于一，所以开口更宽。",
+        "timing": "provided",
+        "id": 21,
+        "speaker": "student",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 1995.0,
+        "end": 2075.0,
+        "text": "教师：然后完成练习二，比较三个函数的开口方向。",
+        "timing": "provided",
+        "id": 22,
+        "speaker": "teacher",
+        "stage": "练习巩固",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 2090.0,
+        "end": 2170.0,
+        "text": "教师：请计算当 x=2 时三个函数的值，并检查符号。",
+        "timing": "provided",
+        "id": 23,
+        "speaker": "teacher",
+        "stage": "练习巩固",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 2185.0,
+        "end": 2265.0,
+        "text": "教师：那么，作图时不要把抛物线画成折线。",
+        "timing": "provided",
+        "id": 24,
+        "speaker": "teacher",
+        "stage": "知识讲授",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 2280.0,
+        "end": 2360.0,
+        "text": "教师：这节课我们总结二次函数的开口、顶点与对称轴。",
+        "timing": "provided",
+        "id": 25,
+        "speaker": "teacher",
+        "stage": "总结回顾",
+        "question": false,
+        "interaction": false
+      },
+      {
+        "start": 2375.0,
+        "end": 2455.0,
+        "text": "教师：请用一句话归纳系数 a 对函数图像的影响，下课。",
+        "timing": "provided",
+        "id": 26,
+        "speaker": "teacher",
+        "stage": "总结回顾",
+        "question": false,
+        "interaction": false
+      }
+    ],
+    "timeline": [
+      {
+        "name": "课堂导入",
+        "start": 0.0,
+        "end": 80.0,
+        "segment_ids": [1]
+      },
+      {
+        "name": "课堂导入",
+        "start": 95.0,
+        "end": 175.0,
+        "segment_ids": [2]
+      },
+      {
+        "name": "知识讲授",
+        "start": 190.0,
+        "end": 270.0,
+        "segment_ids": [3]
+      },
+      {
+        "name": "知识讲授",
+        "start": 285.0,
+        "end": 365.0,
+        "segment_ids": [4]
+      },
+      {
+        "name": "知识讲授",
+        "start": 380.0,
+        "end": 460.0,
+        "segment_ids": [5]
+      },
+      {
+        "name": "知识讲授",
+        "start": 475.0,
+        "end": 555.0,
+        "segment_ids": [6]
+      },
+      {
+        "name": "知识讲授",
+        "start": 570.0,
+        "end": 650.0,
+        "segment_ids": [7]
+      },
+      {
+        "name": "知识讲授",
+        "start": 665.0,
+        "end": 745.0,
+        "segment_ids": [8]
+      },
+      {
+        "name": "知识讲授",
+        "start": 760.0,
+        "end": 840.0,
+        "segment_ids": [9]
+      },
+      {
+        "name": "知识讲授",
+        "start": 855.0,
+        "end": 935.0,
+        "segment_ids": [10]
+      },
+      {
+        "name": "知识讲授",
+        "start": 950.0,
+        "end": 1030.0,
+        "segment_ids": [11]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1045.0,
+        "end": 1125.0,
+        "segment_ids": [12]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1140.0,
+        "end": 1220.0,
+        "segment_ids": [13]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1235.0,
+        "end": 1315.0,
+        "segment_ids": [14]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1330.0,
+        "end": 1410.0,
+        "segment_ids": [15]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1425.0,
+        "end": 1505.0,
+        "segment_ids": [16]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1520.0,
+        "end": 1600.0,
+        "segment_ids": [17]
+      },
+      {
+        "name": "练习巩固",
+        "start": 1615.0,
+        "end": 1695.0,
+        "segment_ids": [18]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1710.0,
+        "end": 1790.0,
+        "segment_ids": [19]
+      },
+      {
+        "name": "探究互动",
+        "start": 1805.0,
+        "end": 1885.0,
+        "segment_ids": [20]
+      },
+      {
+        "name": "知识讲授",
+        "start": 1900.0,
+        "end": 1980.0,
+        "segment_ids": [21]
+      },
+      {
+        "name": "练习巩固",
+        "start": 1995.0,
+        "end": 2075.0,
+        "segment_ids": [22]
+      },
+      {
+        "name": "练习巩固",
+        "start": 2090.0,
+        "end": 2170.0,
+        "segment_ids": [23]
+      },
+      {
+        "name": "知识讲授",
+        "start": 2185.0,
+        "end": 2265.0,
+        "segment_ids": [24]
+      },
+      {
+        "name": "总结回顾",
+        "start": 2280.0,
+        "end": 2360.0,
+        "segment_ids": [25]
+      },
+      {
+        "name": "总结回顾",
+        "start": 2375.0,
+        "end": 2455.0,
+        "segment_ids": [26]
+      }
+    ],
+    "distribution": [
+      {
+        "name": "课堂导入",
+        "seconds": 160.0,
+        "percent": 7.7
+      },
+      {
+        "name": "知识讲授",
+        "seconds": 1440.0,
+        "percent": 69.2
+      },
+      {
+        "name": "练习巩固",
+        "seconds": 240.0,
+        "percent": 11.5
+      },
+      {
+        "name": "探究互动",
+        "seconds": 80.0,
+        "percent": 3.8
+      },
+      {
+        "name": "总结回顾",
+        "seconds": 160.0,
+        "percent": 7.7
+      }
+    ],
+    "questions": [
+      {
+        "segment_id": 2,
+        "start": 95.0,
+        "text": "教师：回顾上节课学习的一次函数，它的图像有什么特点？"
+      },
+      {
+        "segment_id": 4,
+        "start": 285.0,
+        "text": "教师：那么，如果把一次项变成平方项，图像会发生什么变化？"
+      },
+      {
+        "segment_id": 14,
+        "start": 1235.0,
+        "text": "教师：接下来比较 y=-x²，开口方向向下，对不对？"
+      },
+      {
+        "segment_id": 20,
+        "start": 1805.0,
+        "text": "教师：这个观察很好。你认为是什么决定了开口大小？请分享依据。"
+      }
+    ],
+    "interactions": [
+      {
+        "segment_id": 20,
+        "start": 1805.0,
+        "text": "教师：这个观察很好。你认为是什么决定了开口大小？请分享依据。"
+      }
+    ],
+    "fillers": [
+      {
+        "word": "那么",
+        "count": 6
+      },
+      {
+        "word": "然后",
+        "count": 3
+      },
+      {
+        "word": "对不对",
+        "count": 1
+      }
+    ],
+    "rhythm": [
+      {
+        "start": 0,
+        "questions": 1,
+        "interactions": 0,
+        "characters": 72
+      },
+      {
+        "start": 205,
+        "questions": 1,
+        "interactions": 0,
+        "characters": 58
+      },
+      {
+        "start": 409,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 57
+      },
+      {
+        "start": 614,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 51
+      },
+      {
+        "start": 818,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 54
+      },
+      {
+        "start": 1023,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 55
+      },
+      {
+        "start": 1228,
+        "questions": 1,
+        "interactions": 0,
+        "characters": 77
+      },
+      {
+        "start": 1432,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 54
+      },
+      {
+        "start": 1637,
+        "questions": 1,
+        "interactions": 1,
+        "characters": 51
+      },
+      {
+        "start": 1841,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 43
+      },
+      {
+        "start": 2046,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 46
+      },
+      {
+        "start": 2250,
+        "questions": 0,
+        "interactions": 0,
+        "characters": 52
+      }
+    ],
+    "suggestions": [
+      {
+        "priority": "优先尝试",
+        "title": "给学生留出可见的表达机会",
+        "evidence": "全文识别到 1 处互动邀请线索；最长连续环节为「课堂导入」。",
+        "action": "在这一环节加入一次“独立思考 30 秒 → 同桌交流 60 秒 → 两位学生分享”，并记录不同观点。",
+        "segment_id": 1
+      },
+      {
+        "priority": "教学建议",
+        "title": "让提问从判断走向解释",
+        "evidence": "识别到 4 个含疑问线索的话语片段，例如“教师：回顾上节课学习的一次函数，它的图像有什么特点？”。",
+        "action": "选择一个问题，增加“你的依据是什么？”和“还有其他解法吗？”两轮追问，等待至少 3–5 秒。",
+        "segment_id": 2
+      },
+      {
+        "priority": "表达优化",
+        "title": "关注“那么”的重复使用",
+        "evidence": "该表达出现 6 次。部分用法可能具有教学意义，需要结合原文判断。",
+        "action": "回听高频片段，将不必要的衔接词换成短暂停顿，在关键概念前后保留清晰留白。",
+        "segment_id": 4
+      }
+    ],
+    "limitations": [
+      "环节、提问与互动使用可审计的文本规则识别，属于线索而非人工确认事实。",
+      "未进行声纹分离；仅识别文本显式师生标签，不推测真实师生发言占比。",
+      "普通文本时间轴按每秒 3.5 字估算；SRT/VTT 与 ASR 使用原始时间戳。",
+      "语速为有效话语时长内字符数/分钟；重叠字幕可能影响计算。",
+      "一期不含动作、情绪、板书或深度视觉识别。"
+    ]
+  },
+  "frames": [],
+  "has_video": false
+}

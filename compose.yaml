@@ -1,0 +1,21 @@
+services:
+  teachagent:
+    build: .
+    image: teachagent:1.0.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      ASR_DEVICE: cpu
+      ASR_COMPUTE: int8
+      MAX_UPLOAD_MB: 2048
+      COOKIE_SECURE: "0"
+    volumes:
+      - teachagent-data:/app/.data
+      - ./models:/app/models:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  teachagent-data:
