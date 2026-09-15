@@ -6,6 +6,16 @@
 
 ![TeachAgent 工作台](docs/images/dashboard.png)
 
+## 在线演示与自动部署
+
+[体验 GitHub Pages 工作台](https://mm477706421.github.io/TeachAgent/)
+
+Pages 只提供合成课堂演示，直接进入工作台，不显示教师登录表单、不读取真实视频、不调用后端 API。报告示例和演示对话在浏览器内生成。学校正式使用请按下方步骤部署本地服务。
+
+推送到 `main` 后，GitHub Actions 依次执行后端与本地版浏览器测试、Pages 构建、静态演示浏览器测试，全部通过后部署。也可在 Actions 手动运行工作流。CI 使用内置 `GITHUB_TOKEN` 和 OIDC，不需要保存个人访问令牌为仓库 Secret。
+
+Pages 构建命令为 `npm run build:pages`，仓库路径为 `/TeachAgent/`，输出目录 `frontend/dist-pages/`；本地版仍使用 `npm run build` 和 `frontend/dist/`。仅静态演示产物会上传到 Pages，数据目录、模型、密码和本机配置不会上传。
+
 ## 已实现
 
 - **本地视频管线**：MP4 / MOV / MKV / AVI / WebM / M4V 上传，FFmpeg 抽帧与音轨提取，faster-whisper 离线转写，任务进度、失败原因与重试。

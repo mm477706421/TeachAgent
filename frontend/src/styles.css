@@ -1176,6 +1176,11 @@ form > label {
   color: #637a47;
   margin-left: auto;
 }
+.demo-banner > a {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 10px;
+}
 .empty {
   padding: 42px 22px;
   display: flex;

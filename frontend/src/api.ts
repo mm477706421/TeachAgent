@@ -1,3 +1,10 @@
+import { STATIC_DEMO } from "./runtime";
+
+function requireLocalDeployment() {
+  if (STATIC_DEMO)
+    throw new Error("在线演示不连接课堂服务，请使用学校本地部署。");
+}
+
 let csrf = "";
 export const setCsrf = (value: string) => {
   csrf = value;
@@ -6,6 +13,7 @@ export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  requireLocalDeployment();
   const response = await fetch("/api" + path, {
     ...options,
     headers: {
@@ -39,6 +47,7 @@ export function upload(
   form: FormData,
   progress: (percent: number) => void,
 ): Promise<import("./types").Lesson> {
+  requireLocalDeployment();
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/lessons/upload");
@@ -65,6 +74,7 @@ export function upload(
   });
 }
 export async function download(path: string, fallback: string) {
+  requireLocalDeployment();
   const response = await fetch("/api" + path);
   if (!response.ok) {
     const b = await response.json().catch(() => ({ detail: "下载失败" }));

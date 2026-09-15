@@ -48,6 +48,7 @@ import {
 import { api, download, post, setCsrf, upload } from "./api";
 import type { Analysis, Lesson, Message, System, User } from "./types";
 import demoData from "./demo.json";
+import { STATIC_DEMO, PROJECT_URL } from "./runtime";
 
 const DEMO = demoData as Lesson;
 type Page =
@@ -1621,33 +1622,39 @@ function Settings({
             {user.name} · {user.username} ·{" "}
             {user.role === "admin" ? "管理员" : "教师"}
           </p>
-          <form className="password-form" onSubmit={password}>
-            <label>
-              原密码
-              <input
-                name="old_password"
-                type="password"
-                autoComplete="current-password"
-                required
-                maxLength={128}
-              />
-            </label>
-            <label>
-              新密码
-              <input
-                name="new_password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={10}
-                maxLength={128}
-                placeholder="至少 10 位字符"
-              />
-            </label>
-            <button className="btn primary" disabled={busy}>
-              更新密码
-            </button>
-          </form>
+          {STATIC_DEMO ? (
+            <div className="notice">
+              在线演示不接收教师账号或密码。账号管理请在学校本地工作台进行。
+            </div>
+          ) : (
+            <form className="password-form" onSubmit={password}>
+              <label>
+                原密码
+                <input
+                  name="old_password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  maxLength={128}
+                />
+              </label>
+              <label>
+                新密码
+                <input
+                  name="new_password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={10}
+                  maxLength={128}
+                  placeholder="至少 10 位字符"
+                />
+              </label>
+              <button className="btn primary" disabled={busy}>
+                更新密码
+              </button>
+            </form>
+          )}
         </Panel>
       </div>
       <Panel className="method-panel">
@@ -1856,11 +1863,15 @@ function Admin({ notify }: { notify: (s: string) => void }) {
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null),
-    [checking, setChecking] = useState(true),
-    [demo, setDemo] = useState(false),
+  const [user, setUser] = useState<User | null>(
+      STATIC_DEMO
+        ? { id: "demo", username: "demo", name: "林老师", role: "teacher" }
+        : null,
+    ),
+    [checking, setChecking] = useState(!STATIC_DEMO),
+    [demo, setDemo] = useState(STATIC_DEMO),
     [page, setPage] = useState<Page>("overview"),
-    [lessons, setLessons] = useState<Lesson[]>([]),
+    [lessons, setLessons] = useState<Lesson[]>(STATIC_DEMO ? [DEMO] : []),
     [selected, setSelected] = useState<Lesson | null>(null),
     [detailTab, setDetailTab] = useState("overview"),
     [uploadOpen, setUploadOpen] = useState(false),
@@ -1875,6 +1886,14 @@ export default function App() {
     timer.current = setTimeout(() => setToast(""), 5000);
   }
   function logout() {
+    if (STATIC_DEMO) {
+      enterDemo();
+      setSelected(null);
+      setSearch("");
+      setFilter("all");
+      setSidebar(false);
+      return;
+    }
     setUser(null);
     setDemo(false);
     setSelected(null);
@@ -1883,6 +1902,7 @@ export default function App() {
     setPage("overview");
   }
   useEffect(() => {
+    if (STATIC_DEMO) return;
     api<{ user: User; csrf: string }>("/auth/me")
       .then((r) => {
         setCsrf(r.csrf);
@@ -2081,7 +2101,7 @@ export default function App() {
             </div>
             <button
               className="icon-btn"
-              aria-label="退出登录"
+              aria-label={STATIC_DEMO ? "重置演示" : "退出登录"}
               onClick={async () => {
                 try {
                   if (!demo) await post("/auth/logout");
@@ -2139,7 +2159,7 @@ export default function App() {
               <span>搜索</span>
             </div>
             <span className="local-indicator">
-              <span /> 本地工作模式
+              <span /> {STATIC_DEMO ? "在线演示模式" : "本地工作模式"}
             </span>
             <button
               className="icon-btn help-button"
@@ -2154,11 +2174,22 @@ export default function App() {
         {demo && (
           <div className="demo-banner">
             <Sparkle size={15} />
-            <span>正在体验合成课堂示例 · 数据与建议仅用于展示</span>
-            <button onClick={logout}>
-              登录真实工作台
-              <ArrowRight size={14} />
-            </button>
+            <span>
+              {STATIC_DEMO
+                ? "GitHub Pages 公开演示 · 仅含合成数据，不接收真实课堂资料"
+                : "正在体验合成课堂示例 · 数据与建议仅用于展示"}
+            </span>
+            {STATIC_DEMO ? (
+              <a href={PROJECT_URL + "#快速运行"} className="text-btn">
+                本地部署指南
+                <ArrowUpRight size={14} />
+              </a>
+            ) : (
+              <button onClick={logout}>
+                登录真实工作台
+                <ArrowRight size={14} />
+              </button>
+            )}
           </div>
         )}
         <main className="workspace-main" id="main-content">
@@ -2327,19 +2358,43 @@ export default function App() {
           )}
         </main>
       </div>
-      {uploadOpen && (
-        <UploadModal
-          demo={demo}
-          onClose={() => setUploadOpen(false)}
-          onDone={(l) => {
-            setUploadOpen(false);
-            refresh();
-            select(l);
-            notify("课堂已保存到本地空间");
-          }}
-          notify={notify}
-        />
-      )}
+      {uploadOpen &&
+        (STATIC_DEMO ? (
+          <Modal
+            title="真实课堂请在本地处理"
+            onClose={() => setUploadOpen(false)}
+          >
+            <p className="modal-description">
+              这是 GitHub Pages
+              上的合成课堂演示。真实视频、教师登录、离线转写与本地 AI
+              追问，请使用学校服务器上的 TeachAgent。
+            </p>
+            <div className="modal-actions">
+              <button
+                className="btn secondary"
+                onClick={() => setUploadOpen(false)}
+              >
+                继续体验
+              </button>
+              <a className="btn primary" href={PROJECT_URL + "#快速运行"}>
+                查看本地部署指南
+                <ArrowUpRight />
+              </a>
+            </div>
+          </Modal>
+        ) : (
+          <UploadModal
+            demo={demo}
+            onClose={() => setUploadOpen(false)}
+            onDone={(l) => {
+              setUploadOpen(false);
+              refresh();
+              select(l);
+              notify("课堂已保存到本地空间");
+            }}
+            notify={notify}
+          />
+        ))}
       {toast && (
         <div className="toast" role="status">
           <CheckCircle size={20} />
