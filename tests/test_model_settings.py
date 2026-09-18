@@ -1,5 +1,6 @@
 import io
 import json
+import socket
 import threading
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -145,6 +146,41 @@ def test_draft_connection_uses_real_http_protocol_and_does_not_save(
     assert "不包含课堂数据" in request["payload"]["messages"][0]["content"]
 
 
+def test_http_hostname_can_be_saved_tested_and_used_for_chat(
+    clients, compatible_server, monkeypatch
+):
+    c, _ = clients
+    resolve = socket.getaddrinfo
+
+    def local_test_dns(host, *args, **kwargs):
+        if host in {"model.school.test", b"model.school.test"}:
+            host = "127.0.0.1"
+        return resolve(host, *args, **kwargs)
+
+    # Real HTTP requests under a non-loopback hostname, resolved only in this test.
+    monkeypatch.setattr(socket, "getaddrinfo", local_test_dns)
+    body = settings(
+        compatible_server,
+        base_url=compatible_server["base_url"].replace(
+            "127.0.0.1", "model.school.test"
+        ),
+    )
+    saved = c["alice"].put("/api/model-settings", json=body)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["base_url"] == body["base_url"]
+    body.pop("api_key")
+    tested = c["alice"].post("/api/model-settings/test", json=body)
+    assert tested.status_code == 200 and tested.json()["ok"]
+    reply = c["alice"].post(
+        f"/api/lessons/{lesson(c['alice'])}/chat", json={"message": "如何改善互动？"}
+    )
+    assert reply.status_code == 200 and reply.json()["engine"].startswith("openai:")
+    assert len(compatible_server["requests"]) == 2
+    for request in compatible_server["requests"]:
+        assert request["authorization"] == "Bearer test-secret-ONLY-fixture"
+        assert request["path"] == "/v1/chat/completions"
+
+
 def test_online_chat_sends_only_owner_context_and_retains_history(
     clients, compatible_server
 ):
@@ -250,7 +286,8 @@ def test_configuration_requires_auth_csrf_consent_and_validation_hides_secrets(
 @pytest.mark.parametrize(
     "url",
     [
-        "http://example.com/v1",
+        "ftp://example.com/v1",
+        "http://key@example.com/v1",
         "https://key@example.com/v1",
         "https://example.com/v1?key=secret",
         "file:///etc/passwd",

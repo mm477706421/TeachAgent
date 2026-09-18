@@ -178,7 +178,8 @@ export default function ModelSettingsPanel({
                   </div>
                   <p className="subtle">
                     填写 API 前缀（通常含 /v1），系统调用
-                    /chat/completions。在线地址需 HTTPS，本机回环地址支持 HTTP。
+                    /chat/completions。支持 HTTP 和 HTTPS，可填写域名或 IP
+                    地址。
                   </p>
                   {demo ? (
                     <div className="privacy-note">

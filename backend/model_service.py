@@ -62,12 +62,7 @@ def normalize_base_url(value):
             raise ValueError()
         if any(c.isspace() or ord(c) < 32 for c in value) or "\\" in value:
             raise ValueError()
-        loopback = url.hostname == "localhost"
-        try:
-            loopback = loopback or ipaddress.ip_address(url.hostname).is_loopback
-        except ValueError:
-            pass
-        if url.scheme != "https" and not (url.scheme == "http" and loopback):
+        if url.scheme not in {"http", "https"}:
             raise ValueError()
         if port is not None and port < 1:
             raise ValueError()
@@ -77,7 +72,7 @@ def normalize_base_url(value):
         return urlunsplit((url.scheme, url.netloc.lower(), path, "", ""))
     except ValueError as exc:
         raise ModelError(
-            "Base URL 需要 HTTPS 地址（本机回环地址可用 HTTP），且不能包含账号、查询参数或片段。",
+            "Base URL 需要 HTTP 或 HTTPS 地址，且不能包含账号、查询参数或片段。",
             400,
         ) from exc
 
