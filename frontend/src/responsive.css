@@ -1,0 +1,350 @@
+/* Shared workspace sizing: full sidebar, compact rail, then mobile drawer. */
+.app-shell {
+  --sidebar-width: 232px;
+}
+.app-shell.sidebar-compact {
+  --sidebar-width: 80px;
+}
+.app-shell .sidebar {
+  width: var(--sidebar-width);
+  height: 100dvh;
+  padding: 24px 16px max(12px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+.sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.sidebar-heading .brand {
+  font-size: 22px;
+  gap: 8px;
+}
+.drawer-close {
+  display: none;
+}
+.app-shell .main-shell {
+  margin-left: var(--sidebar-width);
+  min-width: 0;
+}
+.sidebar-compact .sidebar {
+  padding-inline: 12px;
+}
+.sidebar-compact .sidebar-heading {
+  justify-content: center;
+}
+.sidebar-compact .brand > span:last-child,
+.sidebar-compact .workspace-label,
+.sidebar-compact .nav-group-label,
+.sidebar-compact .sidebar nav button > span,
+.sidebar-compact .settings-link > span,
+.sidebar-compact .local-card,
+.sidebar-compact .user-block > div,
+.sidebar-compact .user-block > .avatar {
+  display: none;
+}
+.sidebar-compact .sidebar nav button,
+.sidebar-compact .settings-link {
+  min-height: 48px;
+  padding: 12px;
+  justify-content: center;
+}
+.sidebar-compact .user-block {
+  justify-content: center;
+}
+.sidebar-compact .user-block .icon-btn {
+  margin: 0;
+}
+.user-block > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.user-block .icon-btn {
+  flex-shrink: 0;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--canvas);
+  min-height: 78px;
+  height: auto;
+  padding-block: 12px;
+  gap: 12px;
+}
+.breadcrumbs,
+.topbar-actions,
+.top-search,
+.workspace-main,
+.panel,
+.panel-inner,
+.form-grid > *,
+.model-parameters > *,
+.message > div,
+.summary-panel .panel-inner > div,
+.suggestions-list .panel-inner > div {
+  min-width: 0;
+}
+.breadcrumbs {
+  gap: 10px;
+}
+.navigation-toggle {
+  flex-shrink: 0;
+}
+.top-search {
+  display: flex;
+}
+.section-heading,
+.chart-legend,
+.inline-badges,
+.filter-tabs,
+.modal-actions {
+  flex-wrap: wrap;
+}
+.section-heading > *,
+.page-heading > *,
+.chat-intro > div {
+  min-width: 0;
+}
+.page-heading h1,
+.report-grid h2,
+.report-grid .subtle,
+.system-rows strong,
+.audit-list,
+.model-settings,
+.chat-provider-note {
+  overflow-wrap: anywhere;
+}
+.system-rows > div {
+  align-items: flex-start;
+}
+.system-rows strong {
+  text-align: right;
+  max-width: 65%;
+}
+.distribution {
+  flex-wrap: wrap;
+}
+.donut {
+  flex-shrink: 0;
+}
+.detail-tabs {
+  overflow-x: auto;
+  padding-block: 4px;
+  scrollbar-width: thin;
+}
+.detail-tabs button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.lesson-table-wrap {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+/* Keep table data available; horizontal scrolling stays inside the table. */
+.lesson-table th:nth-child(n),
+.lesson-table td:nth-child(n) {
+  display: table-cell;
+}
+.frame-grid {
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+}
+input,
+select,
+textarea {
+  min-width: 0;
+}
+.modal {
+  max-height: calc(100dvh - 32px);
+  overscroll-behavior: contain;
+}
+.toast {
+  overflow-wrap: anywhere;
+}
+
+@media (max-height: 800px) {
+  .sidebar .local-card {
+    display: none;
+  }
+  .sidebar-bottom {
+    padding-top: 20px;
+  }
+  .sidebar .workspace-label {
+    margin-bottom: 20px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .topbar-actions {
+    gap: 10px;
+  }
+  .topbar .local-indicator {
+    display: none;
+  }
+  .overview-middle,
+  .overview-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .model-parameters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    --sidebar-width: 0px;
+  }
+  .app-shell .sidebar {
+    width: min(304px, calc(100vw - 48px));
+    padding-top: max(20px, env(safe-area-inset-top));
+    box-shadow: 12px 0 48px #163d2926;
+    visibility: hidden;
+  }
+  .app-shell .sidebar.open {
+    visibility: visible;
+  }
+  .drawer-close {
+    display: inline-grid;
+    flex-shrink: 0;
+  }
+  .sidebar-heading .brand {
+    font-size: 21px;
+  }
+  .sidebar .icon-btn,
+  .navigation-toggle,
+  .settings-link {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .topbar {
+    margin-inline: 16px;
+    flex-wrap: wrap;
+    min-height: 66px;
+    gap: 4px 12px;
+    padding-block: 6px 10px;
+  }
+  .breadcrumbs {
+    font-size: 12px;
+    flex: 1 1 100%;
+  }
+  .topbar-actions {
+    width: 100%;
+    gap: 12px;
+  }
+  .top-search {
+    flex: 1;
+    border: 1px solid #e2e9df;
+    border-radius: 10px;
+    padding-inline: 10px;
+    background: #fdfefa;
+  }
+  .top-search input {
+    width: 100%;
+    min-height: 40px;
+  }
+  .topbar .local-indicator {
+    display: none;
+  }
+  .workspace-main {
+    padding: 24px 16px max(28px, env(safe-area-inset-bottom));
+  }
+  .demo-banner {
+    margin-inline: 16px;
+    flex-wrap: wrap;
+  }
+  .demo-banner > span {
+    max-width: none;
+    flex: 1 1 200px;
+  }
+  .demo-banner > a,
+  .demo-banner > button {
+    min-height: 36px;
+  }
+  .panel-inner,
+  .overview-bottom .panel-inner,
+  .settings-grid .panel-inner {
+    padding: 18px;
+  }
+  .section-heading {
+    gap: 12px;
+  }
+  .section-heading h2 {
+    flex-wrap: wrap;
+  }
+  .chart-legend {
+    gap: 10px;
+  }
+  .detail-tabs {
+    justify-content: flex-start;
+    gap: 22px;
+  }
+  .detail-tabs button {
+    min-height: 44px;
+  }
+  .form-grid,
+  .model-parameters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+  }
+  .modal-actions > .btn,
+  .model-actions > .btn {
+    flex: 1 1 140px;
+  }
+  .modal-tabs button {
+    padding-inline: 8px;
+  }
+  .chat-input {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .chat-messages {
+    min-height: 220px;
+    max-height: 55dvh;
+  }
+  .chat-panel {
+    min-height: 420px;
+  }
+  .chat-starters button {
+    overflow-wrap: anywhere;
+    padding-inline: 12px;
+  }
+  /* Avoid automatic input zoom on iOS. */
+  input,
+  textarea,
+  select,
+  .top-search input,
+  .chat-input input,
+  .search-field input {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-copy {
+    padding-inline: 18px;
+  }
+  .hero h2 {
+    font-size: 26px;
+  }
+  .stats-grid,
+  .detail-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-panel .panel-inner {
+    flex-direction: column;
+  }
+  .distribution {
+    gap: 20px;
+  }
+}

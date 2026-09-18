@@ -10,8 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test:e2e": "playwright test",
     "test:pages": "playwright test -c playwright.pages.config.ts",
-    "format": "prettier --write src e2e e2e-pages *.ts *.json",
-    "format:check": "prettier --check src e2e e2e-pages *.ts *.json"
+    "format": "prettier --write src e2e e2e-pages e2e-shared *.ts *.json",
+    "format:check": "prettier --check src e2e e2e-pages e2e-shared *.ts *.json"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

@@ -95,6 +95,18 @@ const date = (seconds: number) =>
 const err = (e: unknown) =>
   e instanceof Error ? e.message : "操作失败，请重试";
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => matchMedia(query).matches);
+  useEffect(() => {
+    const media = matchMedia(query);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+  return matches;
+}
+
 function Brand({ light = false }: { light?: boolean }) {
   return (
     <div className={"brand " + (light ? "brand-light" : "")}>
@@ -574,7 +586,12 @@ function LessonTable({
   limit?: number;
 }) {
   return (
-    <div className="lesson-table-wrap">
+    <div
+      className="lesson-table-wrap"
+      role="region"
+      aria-label="课堂列表，可横向滚动"
+      tabIndex={0}
+    >
       <table className="lesson-table">
         <thead>
           <tr>
@@ -1782,7 +1799,12 @@ function Admin({ notify }: { notify: (s: string) => void }) {
             账号数据隔离
           </Badge>
         </div>
-        <div className="lesson-table-wrap">
+        <div
+          className="lesson-table-wrap"
+          role="region"
+          aria-label="教师账号列表，可横向滚动"
+          tabIndex={0}
+        >
           <table className="lesson-table">
             <thead>
               <tr>
@@ -1932,6 +1954,52 @@ export default function App() {
     [filter, setFilter] = useState("all"),
     [toast, setToast] = useState(""),
     [sidebar, setSidebar] = useState(false);
+  const mobile = useMediaQuery("(max-width: 767px)");
+  const narrow = useMediaQuery("(max-width: 1199px)");
+  const [collapsed, setCollapsed] = useState<boolean | null>(null);
+  const compact = !mobile && (collapsed ?? narrow);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    setSidebar(false);
+    setCollapsed(null);
+  }, [mobile, narrow]);
+  useEffect(() => {
+    if (!mobile || !sidebar || !user) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const drawer = sidebarRef.current;
+    const focusable = () =>
+      Array.from(
+        drawer?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ??
+          [],
+      ).filter((button) => button.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    function keydown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSidebar(false);
+      }
+      if (event.key === "Tab") {
+        const buttons = focusable();
+        const first = buttons[0];
+        const last = buttons.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", keydown);
+      menuRef.current?.focus();
+    };
+  }, [mobile, sidebar, user]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function notify(message: string) {
     setToast(message);
@@ -1953,6 +2021,7 @@ export default function App() {
     setLessons([]);
     setCsrf("");
     setPage("overview");
+    setSidebar(false);
   }
   useEffect(() => {
     if (STATIC_DEMO) return;
@@ -2074,9 +2143,27 @@ export default function App() {
       </>
     );
   return (
-    <div className="app-shell">
-      <aside className={"sidebar " + (sidebar ? "open" : "")}>
-        <Brand />
+    <div className={"app-shell" + (compact ? " sidebar-compact" : "")}>
+      <aside
+        ref={sidebarRef}
+        id="primary-sidebar"
+        className={"sidebar " + (sidebar ? "open" : "")}
+        role={mobile ? "dialog" : undefined}
+        aria-label="主导航"
+        aria-modal={mobile && sidebar ? true : undefined}
+        aria-hidden={mobile && !sidebar ? true : undefined}
+        inert={mobile && !sidebar}
+      >
+        <div className="sidebar-heading">
+          <Brand />
+          <button
+            className="icon-btn drawer-close"
+            aria-label="收起导航"
+            onClick={() => setSidebar(false)}
+          >
+            <X size={22} />
+          </button>
+        </div>
         <div className="workspace-label">
           <span className="school-avatar">
             <GraduationCap size={20} />
@@ -2092,6 +2179,9 @@ export default function App() {
           {NAV.map((n) => (
             <button
               key={n.id}
+              aria-label={n.label}
+              aria-current={page === n.id ? "page" : undefined}
+              title={compact ? n.label : undefined}
               className={page === n.id ? "active" : ""}
               onClick={() => navigate(n.id)}
             >
@@ -2126,18 +2216,24 @@ export default function App() {
           </div>
           <button
             className={"settings-link " + (page === "settings" ? "active" : "")}
+            aria-label="空间设置"
+            aria-current={page === "settings" ? "page" : undefined}
+            title={compact ? "空间设置" : undefined}
             onClick={() => navigate("settings")}
           >
             <GearSix size={20} />
-            空间设置
+            <span>空间设置</span>
           </button>
           {user.role === "admin" && (
             <button
               className={"settings-link " + (page === "admin" ? "active" : "")}
+              aria-label="学校管理"
+              aria-current={page === "admin" ? "page" : undefined}
+              title={compact ? "学校管理" : undefined}
               onClick={() => navigate("admin")}
             >
               <Users size={20} />
-              学校管理
+              <span>学校管理</span>
             </button>
           )}
           <div className="user-block">
@@ -2169,20 +2265,28 @@ export default function App() {
           </div>
         </div>
       </aside>
-      {sidebar && (
+      {mobile && sidebar && (
         <button
           aria-label="关闭导航"
           className="sidebar-backdrop"
           onClick={() => setSidebar(false)}
         />
       )}
-      <div className="main-shell">
+      <div className="main-shell" inert={mobile && sidebar}>
         <header className="topbar">
           <div className="breadcrumbs">
             <button
-              className="icon-btn mobile-menu"
-              aria-label="打开导航"
-              onClick={() => setSidebar(true)}
+              ref={menuRef}
+              className="icon-btn navigation-toggle"
+              aria-label={
+                mobile ? "打开导航" : compact ? "展开侧栏" : "收起侧栏"
+              }
+              title={mobile ? "打开导航" : compact ? "展开侧栏" : "收起侧栏"}
+              aria-expanded={mobile ? sidebar : !compact}
+              aria-controls="primary-sidebar"
+              onClick={() =>
+                mobile ? setSidebar(true) : setCollapsed(!compact)
+              }
             >
               <List size={23} />
             </button>
