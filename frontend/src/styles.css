@@ -3082,3 +3082,83 @@ progress::-webkit-progress-value {
     scroll-behavior: auto !important;
   }
 }
+
+.model-settings {
+  margin-bottom: 24px;
+}
+.model-settings .panel-inner {
+  padding: 28px;
+}
+.model-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.model-fieldset > label {
+  margin-top: 20px;
+}
+.model-fieldset > .subtle {
+  margin-top: 9px;
+}
+.model-fieldset > label:first-child {
+  max-width: 400px;
+}
+.model-parameters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.checkbox-label {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.8;
+}
+.checkbox-label input {
+  width: 17px;
+  height: 17px;
+  margin: 4px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+.model-consent {
+  margin-top: 22px;
+  color: #756332;
+}
+.model-consent p {
+  margin: 9px 0 14px;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.model-consent .checkbox-label {
+  font-size: 12px;
+}
+.model-actions {
+  margin-top: 22px;
+}
+.model-result {
+  margin-top: 18px;
+  color: #387b50;
+  line-height: 1.8;
+  font-size: 13px;
+}
+.chat-provider-note {
+  margin-top: 18px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .model-settings .panel-inner {
+    padding: 20px;
+  }
+  .model-parameters {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .model-settings .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

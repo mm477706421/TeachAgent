@@ -36,7 +36,7 @@ header.text = "TEACHAGENT     /     学校本地课堂洞察与教学成长工�
 header.style = styles["Caption"]
 footer = section.footer.paragraphs[0]
 footer.text = (
-    "TeachAgent 1.0.0    ·    功能与部署文档                                      "
+    "TeachAgent 1.1.0    ·    功能与部署文档                                      "
 )
 field = OxmlElement("w:fldSimple")
 field.set(qn("w:instr"), "PAGE")
@@ -60,7 +60,7 @@ while i < len(lines):
             i += 1
         if language == "mermaid":
             document.add_paragraph(
-                "教师浏览器 → 学校内网 FastAPI → 本地数据库 / 按教师隔离的文件目录\n任务队列 → FFmpeg / PyAV → Whisper → 文本蒸馏与报告\n本地教研追问 → 可选的本机 Ollama"
+                "教师浏览器 → 学校内网 FastAPI → 本地数据库 / 按教师隔离的文件目录\n任务队列 → FFmpeg / PyAV → Whisper → 文本蒸馏与报告\n教研追问 → 本机 Ollama / 本地规则 / 显式启用的 OpenAI 兼容服务（仅文本）"
             )
         else:
             paragraph = document.add_paragraph()

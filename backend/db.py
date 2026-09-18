@@ -49,6 +49,9 @@ def init_db():
           target TEXT NOT NULL, created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS login_attempts (
           identity TEXT PRIMARY KEY, count INTEGER NOT NULL, since REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS model_settings (
+          user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          settings TEXT NOT NULL, api_key TEXT NOT NULL DEFAULT '', updated REAL NOT NULL);
         """)
 
 

@@ -42,8 +42,24 @@ test("Pages demo works under the repository path without classroom requests", as
     page.getByRole("heading", { name: "你好，林老师" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "空间设置", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "模型服务设置" }),
+  ).toBeVisible();
+  await page.getByLabel("模型提供方式").selectOption("openai");
+  await expect(page.getByLabel("Base URL", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "保存模型设置" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "测试连接", exact: true }),
+  ).toBeDisabled();
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
   await page.getByRole("button", { name: "打开导航" }).click();
   await page.getByRole("button", { name: "我的课堂", exact: true }).click();
   expect(

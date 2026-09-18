@@ -129,6 +129,24 @@ def process(lesson_id):
                 str(frames / "%03d.jpg"),
             ]
         )
+        # A clip shorter than half the sampling interval can yield no fps frames.
+        if not any(frames.glob("*.jpg")):
+            run_command(
+                [
+                    config.FFMPEG,
+                    "-nostdin",
+                    "-y",
+                    "-v",
+                    "error",
+                    "-i",
+                    str(video),
+                    "-vf",
+                    "scale=640:-2",
+                    "-frames:v",
+                    "1",
+                    str(frames / "001.jpg"),
+                ]
+            )
         update(lesson_id, progress=25, stage="正在提取本地音轨", duration=duration)
         audio = folder / "audio.wav"
         run_command(

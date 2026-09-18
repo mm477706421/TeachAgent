@@ -92,3 +92,15 @@ export interface System {
   chat_mode: string;
   disk_free_gb: number;
 }
+
+export interface ModelSettings {
+  provider: "local" | "rules" | "openai";
+  base_url: string;
+  model: string;
+  api_key_configured: boolean;
+  allow_external: boolean;
+  timeout_seconds: number;
+  temperature: number;
+  max_tokens: number;
+  local_model: string;
+}

@@ -2,13 +2,14 @@ import { test, expect } from "@playwright/test";
 
 test("demo workspace, evidence, conversation, upload dialog and mobile navigation", async ({
   page,
+  baseURL,
 }) => {
   const errors: string[] = [];
   const external: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("request", (r) => {
     if (
-      !r.url().startsWith("http://127.0.0.1:8000") &&
+      !r.url().startsWith(new URL(baseURL!).origin + "/") &&
       !r.url().startsWith("data:")
     )
       external.push(r.url());

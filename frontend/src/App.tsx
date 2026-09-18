@@ -46,7 +46,15 @@ import {
   YAxis,
 } from "recharts";
 import { api, download, post, setCsrf, upload } from "./api";
-import type { Analysis, Lesson, Message, System, User } from "./types";
+import type {
+  Analysis,
+  Lesson,
+  Message,
+  ModelSettings,
+  System,
+  User,
+} from "./types";
+import ModelSettingsPanel from "./ModelSettingsPanel";
 import demoData from "./demo.json";
 import { STATIC_DEMO, PROJECT_URL } from "./runtime";
 
@@ -258,7 +266,7 @@ function Login({
         </div>
         <div className="login-trust">
           <ShieldCheck size={21} />
-          <span>本地计算 · 数据留校 · 教师专属空间</span>
+          <span>本地视频处理 · 教师专属空间</span>
         </div>
       </section>
       <main className="login-form-wrap">
@@ -516,9 +524,9 @@ function UploadModal({
         <div className="privacy-note">
           <ShieldCheck size={20} />
           <p>
-            <strong>课堂数据，始终留在学校</strong>
+            <strong>视频转写与分析在本地完成</strong>
             <span>
-              视频与文本仅保存至本地服务器，转写与分析不调用外部服务。
+              视频与文本保存至本地服务器；启用兼容模型后，追问会发送文本上下文。
             </span>
           </p>
         </div>
@@ -836,7 +844,7 @@ function Overview({
             </span>
           </button>
           <div className="hero-privacy">
-            <ShieldCheck size={15} /> 全程本地处理，教学数据不出校
+            <ShieldCheck size={15} /> 视频本地处理，追问模型自主选择
           </div>
         </div>
         <Orbit />
@@ -964,7 +972,7 @@ function Overview({
       </div>
       <div className="workspace-footer">
         <span>
-          <ShieldCheck size={15} /> 数据留在本地，成长掌握在自己手中。
+          <ShieldCheck size={15} /> 课堂文件本地存储，模型服务按账号配置。
         </span>
         <span>TeachAgent · 你的教学成长伙伴</span>
       </div>
@@ -982,15 +990,31 @@ function ChatPanel({
   notify: (s: string) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]),
+    [modelSettings, setModelSettings] = useState<ModelSettings | null>(null),
     [value, setValue] = useState(""),
     [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    let active = true;
     setMessages([]);
+    setModelSettings(null);
     if (!demo)
-      api<Message[]>(`/lessons/${lesson.id}/chat`)
-        .then(setMessages)
-        .catch((e) => notify(err(e)));
+      Promise.all([
+        api<Message[]>(`/lessons/${lesson.id}/chat`),
+        api<ModelSettings>("/model-settings"),
+      ])
+        .then(([history, settings]) => {
+          if (active) {
+            setMessages(history);
+            setModelSettings(settings);
+          }
+        })
+        .catch((e) => {
+          if (active) notify(err(e));
+        });
+    return () => {
+      active = false;
+    };
   }, [lesson.id, demo]);
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -998,7 +1022,7 @@ function ChatPanel({
   async function send(e?: FormEvent, question?: string) {
     e?.preventDefault();
     const text = (question || value).trim();
-    if (!text || busy) return;
+    if (!text || busy || (!demo && !modelSettings)) return;
     setValue("");
     setBusy(true);
     setMessages((m) => [...m, { role: "user", content: text }]);
@@ -1008,7 +1032,7 @@ function ChatPanel({
         const s = lesson.analysis!.suggestions[0];
         reply = {
           role: "assistant",
-          content: `【示例回答】${s.evidence}\n\n建议：${s.action}\n\n依据：片段 #${s.segment_id}。登录后可使用本机 Ollama 进行连续追问。`,
+          content: `【示例回答】${s.evidence}\n\n建议：${s.action}\n\n依据：片段 #${s.segment_id}。本地部署登录后，可配置 Ollama 或 OpenAI 兼容服务进行追问。`,
           engine: "demo",
         };
       } else
@@ -1034,11 +1058,21 @@ function ChatPanel({
           <h3>一起聊聊，这堂课的更多可能</h3>
           <p>基于「{lesson.title}」的转写与分析回答</p>
         </div>
-        <Badge>
+        <Badge tone={modelSettings?.provider === "openai" ? "amber" : "green"}>
           <LockKey size={12} />
-          本地
+          {demo
+            ? "示例"
+            : modelSettings?.provider === "openai"
+              ? "兼容模型服务"
+              : "本地"}
         </Badge>
       </div>
+      {modelSettings?.provider === "openai" && (
+        <div className="notice chat-provider-note">
+          将发送本课文本上下文至 {new URL(modelSettings.base_url).host} ·{" "}
+          {modelSettings.model}。不发送课堂视频。可在空间设置切回本地模式。
+        </div>
+      )}
       <div className="chat-messages">
         {!messages.length && (
           <div className="chat-starters">
@@ -1048,7 +1082,11 @@ function ChatPanel({
               "怎样把本课的提问改成开放式问题？",
               "我的课堂语言有哪些可以优化的地方？",
             ].map((q) => (
-              <button key={q} onClick={() => send(undefined, q)}>
+              <button
+                key={q}
+                disabled={busy || (!demo && !modelSettings)}
+                onClick={() => send(undefined, q)}
+              >
                 {q}
                 <ArrowUpRight size={16} />
               </button>
@@ -1065,10 +1103,12 @@ function ChatPanel({
               {m.engine && (
                 <small>
                   {m.engine === "local-rules"
-                    ? "本地规则建议 · Ollama 未就绪"
+                    ? "本地规则建议"
                     : m.engine === "demo"
                       ? "合成示例回答"
-                      : `本机模型 · ${m.engine.replace("ollama:", "")}`}
+                      : m.engine.startsWith("openai:")
+                        ? `OpenAI 兼容模型 · ${m.engine.slice(7)}`
+                        : `本机模型 · ${m.engine.replace("ollama:", "")}`}
                 </small>
               )}
             </div>
@@ -1077,7 +1117,7 @@ function ChatPanel({
         {busy && (
           <div className="thinking">
             <CircleNotch className="spin" />
-            正在本地整理课堂证据…
+            正在整理课堂证据…
           </div>
         )}
         <div ref={bottom} />
@@ -1093,7 +1133,7 @@ function ChatPanel({
         />
         <button
           className="btn primary"
-          disabled={busy || !value.trim()}
+          disabled={busy || !value.trim() || (!demo && !modelSettings)}
           aria-label="发送问题"
         >
           <ArrowRight size={21} />
@@ -1567,13 +1607,24 @@ function Settings({
           <p>了解数据在哪里，以及课堂如何被处理。</p>
         </div>
       </div>
+      <ModelSettingsPanel
+        demo={demo}
+        onSaved={() => {
+          if (!demo)
+            api<System>("/system")
+              .then(setSystem)
+              .catch((e) => notify(err(e)));
+        }}
+      />
       <div className="settings-grid">
         <Panel>
           <div className="section-heading">
             <h2>
               <ShieldCheck /> 本地运行状态
             </h2>
-            <Badge>数据不出校</Badge>
+            <Badge>
+              {system?.local_only === false ? "已启用兼容服务" : "本地模式"}
+            </Badge>
           </div>
           {demo ? (
             <div className="notice">
@@ -1595,7 +1646,7 @@ function Settings({
                 ["计算设备", system.asr_device.toUpperCase()],
                 ["视频大小上限", `${system.max_upload_mb} MB`],
                 ["可用磁盘", `${system.disk_free_gb} GB`],
-                ["本机对话模型", system.chat_model],
+                ["当前对话模型", system.chat_model],
               ].map(([k, v]) => (
                 <div key={k}>
                   <span>{k}</span>
@@ -1705,6 +1756,8 @@ function Admin({ notify }: { notify: (s: string) => void }) {
     export_report: "下载报告",
     delete_lesson: "删除课堂",
     password_changed: "修改密码",
+    model_settings_changed: "更新模型设置",
+    model_connection_test: "测试模型连接",
   };
   return (
     <>
@@ -2062,9 +2115,9 @@ export default function App() {
             </span>
             <strong>安心教研，本地守护</strong>
             <p>
-              你的课堂数据
+              你的课堂文件
               <br />
-              只留在学校的服务器
+              保存在学校的服务器
             </p>
             <span className="local-status">
               <span />
@@ -2159,7 +2212,7 @@ export default function App() {
               <span>搜索</span>
             </div>
             <span className="local-indicator">
-              <span /> {STATIC_DEMO ? "在线演示模式" : "本地工作模式"}
+              <span /> {STATIC_DEMO ? "在线演示模式" : "学校私有部署"}
             </span>
             <button
               className="icon-btn help-button"
