@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   ArrowRight,
@@ -55,6 +55,7 @@ import type {
   User,
 } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
+import AssistantMessage from "./AssistantMessage";
 import demoData from "./demo.json";
 import { STATIC_DEMO, PROJECT_URL } from "./runtime";
 
@@ -1009,12 +1010,24 @@ function ChatPanel({
   const [messages, setMessages] = useState<Message[]>([]),
     [modelSettings, setModelSettings] = useState<ModelSettings | null>(null),
     [value, setValue] = useState(""),
-    [busy, setBusy] = useState(false);
-  const bottom = useRef<HTMLDivElement>(null);
+    [busy, setBusy] = useState(false),
+    [typingIndex, setTypingIndex] = useState<number | null>(null);
+  const scrollArea = useRef<HTMLDivElement>(null);
+  const followOutput = useRef(true);
+  const pending = useRef<AbortController | null>(null);
+  const completeTyping = useCallback(() => setTypingIndex(null), []);
+  const scrollToLatest = useCallback(() => {
+    if (followOutput.current && scrollArea.current) {
+      scrollArea.current.scrollTop = scrollArea.current.scrollHeight;
+    }
+  }, []);
   useEffect(() => {
     let active = true;
     setMessages([]);
     setModelSettings(null);
+    setTypingIndex(null);
+    setBusy(false);
+    followOutput.current = true;
     if (!demo)
       Promise.all([
         api<Message[]>(`/lessons/${lesson.id}/chat`),
@@ -1031,15 +1044,27 @@ function ChatPanel({
         });
     return () => {
       active = false;
+      pending.current?.abort();
+      pending.current = null;
     };
   }, [lesson.id, demo]);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [messages, busy]);
+    scrollToLatest();
+  }, [messages, busy, scrollToLatest]);
   async function send(e?: FormEvent, question?: string) {
     e?.preventDefault();
     const text = (question || value).trim();
-    if (!text || busy || (!demo && !modelSettings)) return;
+    if (
+      !text ||
+      busy ||
+      pending.current ||
+      typingIndex !== null ||
+      (!demo && !modelSettings)
+    )
+      return;
+    const controller = new AbortController();
+    pending.current = controller;
+    followOutput.current = true;
     setValue("");
     setBusy(true);
     setMessages((m) => [...m, { role: "user", content: text }]);
@@ -1049,20 +1074,28 @@ function ChatPanel({
         const s = lesson.analysis!.suggestions[0];
         reply = {
           role: "assistant",
-          content: `【示例回答】${s.evidence}\n\n建议：${s.action}\n\n依据：片段 #${s.segment_id}。本地部署登录后，可配置 Ollama 或 OpenAI 兼容服务进行追问。`,
+          content: `### 课堂观察\n\n${s.evidence}\n\n### 可以尝试\n\n1. **调整教学活动**：${s.action}\n2. **回看证据**：对照片段 #${s.segment_id}，记录学生的回应，再决定下一步调整。\n\n> 这是合成课堂的示例回答。实际教研需结合完整原文与课堂情境判断。\n\n本地部署登录后，可配置 Ollama 或 OpenAI 兼容服务进行追问。`,
           engine: "demo",
         };
       } else
-        reply = await post<Message>(`/lessons/${lesson.id}/chat`, {
-          message: text,
+        reply = await api<Message>(`/lessons/${lesson.id}/chat`, {
+          method: "POST",
+          body: JSON.stringify({ message: text }),
+          signal: controller.signal,
         });
+      if (controller.signal.aborted) return;
+      setTypingIndex(messages.length + 1);
       setMessages((m) => [...m, reply]);
     } catch (e) {
+      if (controller.signal.aborted) return;
       setMessages((m) => m.slice(0, -1));
       setValue(text);
       notify(err(e));
     } finally {
-      setBusy(false);
+      if (pending.current === controller) {
+        pending.current = null;
+        setBusy(false);
+      }
     }
   }
   return (
@@ -1090,7 +1123,15 @@ function ChatPanel({
           {modelSettings.model}。不发送课堂视频。可在空间设置切回本地模式。
         </div>
       )}
-      <div className="chat-messages">
+      <div
+        className="chat-messages"
+        ref={scrollArea}
+        onScroll={(e) => {
+          const area = e.currentTarget;
+          followOutput.current =
+            area.scrollHeight - area.clientHeight - area.scrollTop < 48;
+        }}
+      >
         {!messages.length && (
           <div className="chat-starters">
             <p>从一个具体的问题开始</p>
@@ -1116,7 +1157,16 @@ function ChatPanel({
               {m.role === "assistant" ? <Sparkle size={17} /> : "我"}
             </span>
             <div>
-              <div className="message-bubble">{m.content}</div>
+              {m.role === "assistant" ? (
+                <AssistantMessage
+                  content={m.content}
+                  animate={typingIndex === i}
+                  onComplete={completeTyping}
+                  onProgress={scrollToLatest}
+                />
+              ) : (
+                <div className="message-bubble">{m.content}</div>
+              )}
               {m.engine && (
                 <small>
                   {m.engine === "local-rules"
@@ -1137,7 +1187,6 @@ function ChatPanel({
             正在整理课堂证据…
           </div>
         )}
-        <div ref={bottom} />
       </div>
       <form className="chat-input" onSubmit={send}>
         <input
@@ -1150,7 +1199,12 @@ function ChatPanel({
         />
         <button
           className="btn primary"
-          disabled={busy || !value.trim() || (!demo && !modelSettings)}
+          disabled={
+            busy ||
+            typingIndex !== null ||
+            !value.trim() ||
+            (!demo && !modelSettings)
+          }
           aria-label="发送问题"
         >
           <ArrowRight size={21} />

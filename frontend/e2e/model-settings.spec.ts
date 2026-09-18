@@ -33,7 +33,8 @@ test("per-account model settings, draft connection, saved key, online chat and r
                 {
                   message: {
                     role: "assistant",
-                    content: "协议验收回答：增加学生讨论，再结合课堂证据追问。",
+                    content:
+                      "### 协议验收回答\n\n增加**学生讨论**，再结合课堂证据追问。",
                   },
                 },
               ],
@@ -142,6 +143,12 @@ test("per-account model settings, draft connection, saved key, online chat and r
     await page.getByRole("button", { name: "发送问题" }).click();
     await expect(page.locator(".message.assistant")).toContainText(
       "协议验收回答",
+    );
+    await expect(page.locator(".message.assistant h3")).toHaveText(
+      "协议验收回答",
+    );
+    await expect(page.locator(".message.assistant strong")).toHaveText(
+      "学生讨论",
     );
     await expect(
       page.getByText("OpenAI 兼容模型 · validation-model", { exact: true }),

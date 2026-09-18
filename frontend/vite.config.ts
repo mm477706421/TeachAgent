@@ -5,7 +5,14 @@ export default defineConfig(({ mode }) => ({
   base: mode === "pages" ? process.env.PAGES_BASE_PATH || "/TeachAgent/" : "/",
   build: {
     outDir: mode === "pages" ? "dist-pages" : "dist",
-    rollupOptions: { output: { manualChunks: { charts: ["recharts"] } } },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ["recharts"],
+          markdown: ["react-markdown", "remark-gfm"],
+        },
+      },
+    },
   },
   server: {
     proxy: { "/api": { target: "http://127.0.0.1:8000", changeOrigin: false } },
