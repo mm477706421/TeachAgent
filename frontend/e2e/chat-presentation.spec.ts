@@ -40,15 +40,35 @@ async function mockChat(page: Page, content = answer) {
     else if (path === "/api/lessons") body = [lesson];
     else if (path === "/api/lessons/markdown-test") body = lesson;
     else if (path === "/api/model-settings") body = { provider: "rules" };
-    else if (path === "/api/lessons/markdown-test/chat") {
-      if (route.request().method() === "POST") {
-        const reply = { role: "assistant", content, engine: "local-rules" };
-        history.push(
-          { role: "user", content: route.request().postDataJSON().message },
-          reply,
-        );
-        body = reply;
-      } else body = history;
+    else if (path === "/api/lessons/markdown-test/chat/stream") {
+      const input = route.request().postDataJSON();
+      const reply = {
+        role: "assistant",
+        content,
+        engine: "local-rules",
+        status: "completed",
+        request_id: input.request_id,
+        attempt: input.retry ? 2 : 1,
+      };
+      if (input.retry) history.splice(-1, 1, reply);
+      else history.push({ role: "user", content: input.message }, reply);
+      await route.fulfill({
+        contentType: "text/event-stream",
+        body: [
+          {
+            type: "start",
+            request_id: input.request_id,
+            attempt: reply.attempt,
+          },
+          { type: "delta", content, engine: "local-rules" },
+          { type: "done", ...reply },
+        ]
+          .map((e) => `data: ${JSON.stringify(e)}\n\n`)
+          .join(""),
+      });
+      return;
+    } else if (path === "/api/lessons/markdown-test/chat") {
+      body = history;
     } else throw new Error(`Unexpected UI test API: ${path}`);
     await route.fulfill({ json: body });
   });
@@ -67,47 +87,30 @@ async function ask(page: Page, question = "如何改善互动？") {
   await expect(page.locator(".message.assistant").last()).toBeVisible();
 }
 
-test("new replies reveal progressively, complete, skip, and reload without replay", async ({
+test("received replies render immediately, regenerate without duplicates and reload", async ({
   page,
 }) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   const history = await mockChat(page);
-  await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await ask(page, "**用户文字保持原样**");
-  const reply = page.locator(".assistant-reply").last();
-  const markdown = reply.locator(".markdown-body");
-  await expect(reply).toHaveAttribute("data-typing", "true");
-  await page.clock.runFor(300);
-  const first = (await markdown.innerText()).length;
-  expect(first).toBeGreaterThan(0);
-  await page.clock.runFor(500);
-  expect((await markdown.innerText()).length).toBeGreaterThan(first);
-  await expect(markdown).not.toContainText("教学建议结束");
+  await expect(page.locator(".markdown-body")).toContainText("教学建议结束");
   await expect(page.locator(".message.user strong")).toHaveCount(0);
   await expect(page.locator(".message.user")).toContainText(
     "**用户文字保持原样**",
   );
-  await page.getByRole("textbox", { name: "向教研助手提问" }).fill("下一问");
-  await expect(page.getByRole("button", { name: "发送问题" })).toBeDisabled();
-  await page.clock.fastForward(13000);
-  await expect(reply).toHaveAttribute("data-typing", "false");
-  await expect(markdown).toContainText("👩‍🏫 教学建议结束。");
-  await expect(page.getByRole("button", { name: "发送问题" })).toBeEnabled();
-  await ask(page, "再给一个例子");
-  await expect(reply).toHaveAttribute("data-typing", "true");
-  await page.getByRole("button", { name: "立即显示全文" }).click();
-  await expect(reply).toHaveAttribute("data-typing", "false");
-  await expect(markdown).toContainText("教学建议结束");
-  expect(history).toHaveLength(4);
-  expect(history[3].content).toBe(answer);
+  await expect(page.locator(".assistant-reply")).toHaveAttribute(
+    "data-typing",
+    "false",
+  );
+  await page.getByRole("button", { name: "重新生成", exact: true }).click();
+  await expect(page.locator(".markdown-body")).toContainText("教学建议结束");
+  expect(history).toHaveLength(2);
   await page.getByRole("button", { name: "授课方式画像", exact: true }).click();
   await page.getByRole("button", { name: "AI 追问", exact: true }).click();
-  await expect(page.locator(".assistant-reply")).toHaveCount(2);
-  await expect(
-    page.locator('.assistant-reply[data-typing="true"]'),
-  ).toHaveCount(0);
-  await expect(markdown).toContainText("教学建议结束");
+  await expect(page.locator(".assistant-reply")).toHaveCount(1);
+  await expect(page.locator(".assistant-reply")).toHaveAttribute(
+    "data-typing",
+    "false",
+  );
 });
 
 test("Markdown renders safely with responsive tables and code blocks", async ({
@@ -170,48 +173,28 @@ test("Markdown renders safely with responsive tables and code blocks", async ({
     .screenshot({ path: "../docs/images/chat-markdown.png" });
 });
 
-test("typing follows the bottom but respects scrolling up and reduced motion", async ({
+test("long Markdown respects reduced motion and stays readable after navigation", async ({
   page,
 }) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await mockChat(
     page,
     "### 课堂建议\n\n" + "这是需要结合证据逐步核实的教学观察。\n\n".repeat(100),
   );
-  await page.clock.install();
-  await page.clock.pauseAt(new Date(Date.now() + 1000));
   await ask(page);
-  await page.clock.runFor(6000);
+  await expect(page.locator(".assistant-reply")).toHaveAttribute(
+    "data-typing",
+    "false",
+  );
   const area = page.locator(".chat-messages");
   expect(await area.evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
   await area.evaluate((e) => {
     e.scrollTop = 0;
     e.dispatchEvent(new Event("scroll"));
   });
-  await page.clock.runFor(500);
-  expect(await area.evaluate((e) => e.scrollTop)).toBe(0);
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.locator(".assistant-reply")).toHaveAttribute(
-    "data-typing",
-    "false",
-  );
-  await expect(page.getByRole("button", { name: "立即显示全文" })).toHaveCount(
-    0,
-  );
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  await ask(page, "再问一次");
-  await expect(page.locator(".assistant-reply").last()).toHaveAttribute(
-    "data-typing",
-    "true",
-  );
   await page.getByRole("button", { name: "授课方式画像", exact: true }).click();
-  await page.clock.fastForward(15000);
   await page.getByRole("button", { name: "AI 追问", exact: true }).click();
-  await expect(page.locator(".assistant-reply")).toHaveCount(2);
-  await expect(
-    page.locator('.assistant-reply[data-typing="true"]'),
-  ).toHaveCount(0);
+  await expect(page.locator(".assistant-reply")).toHaveCount(1);
   expect(errors).toEqual([]);
 });

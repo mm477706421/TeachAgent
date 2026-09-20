@@ -52,6 +52,12 @@ def init_db():
         CREATE TABLE IF NOT EXISTS model_settings (
           user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
           settings TEXT NOT NULL, api_key TEXT NOT NULL DEFAULT '', updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS chat_turns (
+          id TEXT PRIMARY KEY, lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+          question TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', engine TEXT,
+          status TEXT NOT NULL, error TEXT, created REAL NOT NULL, attempt INTEGER NOT NULL DEFAULT 1);
+        CREATE UNIQUE INDEX IF NOT EXISTS one_active_chat ON chat_turns(lesson_id)
+          WHERE status IN ('running','stopping');
         """)
 
 

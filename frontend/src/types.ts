@@ -79,6 +79,16 @@ export interface Message {
   content: string;
   engine?: string;
   created?: number;
+  request_id?: string;
+  status?:
+    | "running"
+    | "stopping"
+    | "completed"
+    | "stopped"
+    | "error"
+    | "interrupted";
+  error?: string | null;
+  attempt?: number;
 }
 export interface System {
   local_only: boolean;

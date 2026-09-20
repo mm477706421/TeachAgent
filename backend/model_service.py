@@ -172,7 +172,7 @@ def local_ollama_url():
     return config.OLLAMA_URL.rstrip("/")
 
 
-async def complete(settings, encrypted, messages):
+def _request(settings, encrypted, messages, streaming=False):
     online = settings["provider"] == "openai"
     headers = {}
     if online:
@@ -190,7 +190,7 @@ async def complete(settings, encrypted, messages):
         payload = {
             "model": settings["model"],
             "messages": messages,
-            "stream": False,
+            "stream": streaming,
             "temperature": settings["temperature"],
             "max_tokens": settings["max_tokens"],
         }
@@ -203,13 +203,18 @@ async def complete(settings, encrypted, messages):
         payload = {
             "model": config.OLLAMA_MODEL,
             "messages": messages,
-            "stream": False,
+            "stream": streaming,
             "options": {
                 "temperature": settings["temperature"],
                 "num_predict": settings["max_tokens"],
             },
         }
         engine = "ollama:" + config.OLLAMA_MODEL
+    return online, url, headers, payload, engine
+
+
+async def complete(settings, encrypted, messages):
+    online, url, headers, payload, engine = _request(settings, encrypted, messages)
     try:
         async with asyncio.timeout(settings["timeout_seconds"]):
             async with httpx.AsyncClient(
@@ -259,6 +264,126 @@ async def complete(settings, encrypted, messages):
         ) from exc
 
 
+async def stream(settings, encrypted, messages):
+    """Yield provider deltas immediately; closing the generator closes the HTTP stream."""
+    online, url, headers, payload, engine = _request(
+        settings, encrypted, messages, streaming=True
+    )
+    received = False
+    finished = False
+
+    def decode(data):
+        nonlocal received, finished
+        if online and data == "[DONE]":
+            finished = True
+            return ""
+        value = json.loads(data)
+        if value.get("error"):
+            raise ModelError("模型流返回错误，请检查服务状态后重试。")
+        if online:
+            choices = value.get("choices", [])
+            if not choices:
+                return ""  # Usage-only or keepalive frame.
+            choice = next((c for c in choices if c.get("index", 0) == 0), None)
+            if choice is None:
+                return ""
+            delta = choice.get("delta", {}).get("content") or ""
+            reason = choice.get("finish_reason")
+            if reason in {"length", "content_filter", "tool_calls", "function_call"}:
+                raise ModelError(
+                    "模型提前结束回答（长度限制、内容过滤或工具调用），请调整设置后重试。"
+                )
+            finished = reason is not None
+        else:
+            delta = value.get("message", {}).get("content", "")
+            finished = value.get("done") is True
+            if value.get("done_reason") == "length":
+                raise ModelError("模型达到输出长度限制，请调整设置后重试。")
+        if not isinstance(delta, str):
+            raise ValueError()
+        received = received or bool(delta.strip())
+        return delta
+
+    try:
+        async with asyncio.timeout(settings["timeout_seconds"]):
+            async with httpx.AsyncClient(
+                timeout=settings["timeout_seconds"],
+                trust_env=False,
+                follow_redirects=False,
+            ) as client:
+                async with client.stream(
+                    "POST", url, json=payload, headers=headers
+                ) as response:
+                    if response.status_code in (401, 403):
+                        raise ModelError(
+                            "模型服务认证失败，请检查 API Key 和访问权限。"
+                        )
+                    if response.status_code == 404:
+                        raise ModelError(
+                            "模型或接口不存在，请检查 Base URL 和模型 ID。"
+                        )
+                    if response.status_code == 429:
+                        raise ModelError(
+                            "模型服务限流或额度不足，请稍后重试并检查配额。"
+                        )
+                    if 300 <= response.status_code < 400:
+                        raise ModelError("模型服务返回重定向，请直接配置最终接口地址。")
+                    response.raise_for_status()
+                    if online and "text/event-stream" not in response.headers.get(
+                        "content-type", ""
+                    ):
+                        raise ModelError(
+                            "接口未返回 SSE 流，请使用支持 stream=true 的 Chat Completions 服务。"
+                        )
+                    buffer, event, size = "", [], 0
+                    async for chunk in response.aiter_text():
+                        size += len(chunk.encode("utf-8"))
+                        if size > 1024 * 1024:
+                            raise ModelError("模型响应超过大小限制。")
+                        buffer += chunk
+                        while "\n" in buffer:
+                            line, buffer = buffer.split("\n", 1)
+                            line = line.rstrip("\r")
+                            if online:
+                                if line.startswith("data:"):
+                                    event.append(line[5:].removeprefix(" "))
+                                if line or not event:
+                                    continue
+                                data, event = "\n".join(event), []
+                            else:
+                                if not line.strip():
+                                    continue
+                                data = line
+                            delta = decode(data)
+                            if delta:
+                                yield {"content": delta, "engine": engine}
+                            if finished:
+                                break
+                        if finished:
+                            break
+                    # Ollama may terminate the last JSON line without a newline.
+                    if not online and buffer.strip() and not finished:
+                        delta = decode(buffer)
+                        if delta:
+                            yield {"content": delta, "engine": engine}
+                    if not finished:
+                        raise ModelError("模型连接提前中断，回答尚未完成，请重试。")
+                    if not received:
+                        raise ModelError(
+                            "模型未返回可显示的回答，请检查模型是否支持文本对话。"
+                        )
+    except (TimeoutError, httpx.TimeoutException) as exc:
+        raise ModelError("模型请求超时，请稍后重试或调整超时设置。", 504) from exc
+    except httpx.HTTPError as exc:
+        raise ModelError(
+            "模型连接中断，请检查服务地址、网络与服务状态后重试。"
+        ) from exc
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise ModelError(
+            "模型流响应格式不兼容，请使用 SSE Chat Completions 或 Ollama 流式接口。"
+        ) from exc
+
+
 async def test_connection(user_id, body):
     settings, encrypted = prepare_settings(user_id, body)
     started = time.monotonic()
@@ -269,7 +394,7 @@ async def test_connection(user_id, body):
             "latency_ms": 0,
             "message": "规则模式已就绪，无需网络。",
         }
-    await complete(
+    async for _ in stream(
         settings,
         encrypted,
         [
@@ -278,12 +403,13 @@ async def test_connection(user_id, body):
                 "content": "请只回复 OK。这是一条连接测试，不包含课堂数据。",
             }
         ],
-    )
+    ):
+        pass
     return {
         "ok": True,
         "engine": ("openai:" + settings["model"])
         if settings["provider"] == "openai"
         else "ollama:" + config.OLLAMA_MODEL,
         "latency_ms": round((time.monotonic() - started) * 1000),
-        "message": "连接成功，已收到有效模型回答。此测试未保存配置。",
+        "message": "连接成功，已收到有效流式回答。此测试未保存配置。",
     }

@@ -154,20 +154,6 @@
   border-radius: 2px;
   animation: typing-blink 1s step-end infinite;
 }
-.typing-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  padding-top: 7px;
-  color: #72816b;
-  font-size: 11px;
-}
-.typing-controls button {
-  min-height: 32px;
-  font-size: 11px;
-}
 @keyframes typing-blink {
   50% {
     opacity: 0;
@@ -178,7 +164,7 @@
     font-size: 13px;
     padding: 15px;
   }
-  .typing-controls button {
+  .reply-actions button {
     min-height: 44px;
   }
 }
@@ -186,4 +172,28 @@
   .typing-cursor {
     animation: none;
   }
+}
+.reply-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted, #657766);
+}
+.stream-status {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted, #657766);
+}
+.reply-error {
+  font-size: 13px;
+  color: #a13d2d;
+  overflow-wrap: anywhere;
+}
+.stop-generation {
+  flex-shrink: 0;
+  white-space: nowrap;
 }

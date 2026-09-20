@@ -24,6 +24,13 @@ test("per-account model settings, draft connection, saved key, online chat and r
       authorization: req.headers.authorization,
       body: JSON.parse(body),
     });
+    if (JSON.parse(body).stream && status === 200) {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end(
+        `data: ${JSON.stringify({ choices: [{ delta: { content: "### 协议验收回答\n\n增加**学生讨论**，再结合课堂证据追问。" }, finish_reason: "stop" }] })}\n\n`,
+      );
+      return;
+    }
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify(
@@ -161,6 +168,9 @@ test("per-account model settings, draft connection, saved key, online chat and r
       .fill("再给一个例子");
     await page.getByRole("button", { name: "发送问题" }).click();
     await expect(page.locator(".message.assistant")).toHaveCount(2);
+    await expect(
+      page.getByRole("button", { name: "重新生成", exact: true }),
+    ).toBeEnabled();
     expect(
       calls.at(-1)!.body.messages.some((m) => m.role === "assistant"),
     ).toBeTruthy();

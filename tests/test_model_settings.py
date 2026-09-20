@@ -40,8 +40,28 @@ def compatible_server():
                 }
             )
             data = json.dumps(state["response"]).encode()
+            mime = "application/json"
+            if payload.get("stream") and state["status"] == 200:
+                mime = "text/event-stream"
+                content = (
+                    state["response"]
+                    .get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                )
+                data = (
+                    "data: "
+                    + json.dumps(
+                        {
+                            "choices": [
+                                {"delta": {"content": content}, "finish_reason": "stop"}
+                            ]
+                        }
+                    )
+                    + "\n\n"
+                ).encode()
             self.send_response(state["status"])
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(data)))
             if state["status"] == 302:
                 self.send_header("Location", "/must-not-follow")
@@ -140,7 +160,7 @@ def test_draft_connection_uses_real_http_protocol_and_does_not_save(
     request = compatible_server["requests"][0]
     assert request["path"] == "/v1/chat/completions"
     assert request["authorization"] == "Bearer test-secret-ONLY-fixture"
-    assert request["payload"]["stream"] is False
+    assert request["payload"]["stream"] is True
     assert request["payload"]["model"] == "test-teaching-model"
     assert len(request["payload"]["messages"]) == 1
     assert "不包含课堂数据" in request["payload"]["messages"][0]["content"]

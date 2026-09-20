@@ -43,6 +43,85 @@ export const post = <T>(path: string, body?: unknown) =>
     method: "POST",
     body: body ? JSON.stringify(body) : undefined,
   });
+
+export type ChatEvent = {
+  type: "start" | "delta" | "done";
+  content?: string;
+  engine?: string;
+  request_id?: string;
+  attempt?: number;
+  status?: import("./types").Message["status"];
+  error?: string;
+};
+
+export async function streamChat(
+  lessonId: string,
+  body: {
+    message: string;
+    request_id: string;
+    retry: boolean;
+    expected_attempt: number;
+  },
+  signal: AbortSignal,
+  onEvent: (event: ChatEvent) => void,
+) {
+  requireLocalDeployment();
+  const response = await fetch(`/api/lessons/${lessonId}/chat/stream`, {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    if (response.status === 401)
+      window.dispatchEvent(new Event("session-expired"));
+    const data = await response.json().catch(() => ({}));
+    throw new Error(
+      typeof data.detail === "string"
+        ? data.detail
+        : "无法开始生成，请刷新后重试。",
+    );
+  }
+  if (
+    !response.body ||
+    !response.headers.get("content-type")?.includes("text/event-stream")
+  )
+    throw new Error("服务器未返回流式回答，请检查部署配置。");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "",
+    data: string[] = [],
+    done = false;
+  try {
+    while (!done) {
+      const chunk = await reader.read();
+      buffer += decoder.decode(chunk.value, { stream: !chunk.done });
+      let end: number;
+      while ((end = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, end).replace(/\r$/, "");
+        buffer = buffer.slice(end + 1);
+        if (line.startsWith("data:"))
+          data.push(line.slice(5).replace(/^ /, ""));
+        if (!line && data.length) {
+          const event: ChatEvent = JSON.parse(data.join("\n"));
+          data = [];
+          if (!["start", "delta", "done"].includes(event.type))
+            throw new Error("流式事件格式无效。");
+          onEvent(event);
+          if (event.type === "done") {
+            done = true;
+            break;
+          }
+        }
+      }
+      if (chunk.done) break;
+    }
+    if (!done) throw new Error("连接已中断，回答尚未完成，可重试此问题。");
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+}
 export function upload(
   form: FormData,
   progress: (percent: number) => void,

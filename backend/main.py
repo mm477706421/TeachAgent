@@ -37,7 +37,7 @@ from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
 from .reports import html_report, markdown
-from . import model_service
+from . import model_service, chat_service
 from .model_service import ModelError, ModelSettingsInput
 
 
@@ -47,6 +47,9 @@ async def lifespan(app):
     with connect() as db:
         db.execute(
             "UPDATE lessons SET status='failed', stage='任务中断', error='服务曾重启，请点击重试重新处理。' WHERE status IN ('queued','processing','uploading')"
+        )
+        db.execute(
+            "UPDATE chat_turns SET status='interrupted',error='服务重启，回答未完成，请重试。' WHERE status IN ('running','stopping')"
         )
         db.execute("DELETE FROM sessions WHERE expires<?", (time.time(),))
     yield
@@ -537,14 +540,26 @@ def report(lesson_id: str, format: str = "md", user=Depends(current_user)):
 @app.get("/api/lessons/{lesson_id}/chat")
 def messages(lesson_id: str, user=Depends(current_user)):
     owned(lesson_id, user)
-    with connect() as db:
-        return [
-            dict(r)
-            for r in db.execute(
-                "SELECT role,content,engine,created FROM messages WHERE lesson_id=? ORDER BY id",
-                (lesson_id,),
-            ).fetchall()
-        ]
+    return chat_service.history(lesson_id)
+
+
+@app.post("/api/lessons/{lesson_id}/chat/stream")
+async def stream_chat(
+    lesson_id: str, body: chat_service.StreamChat, user=Depends(current_user)
+):
+    lesson = owned(lesson_id, user)
+    rid, question, attempt = chat_service.prepare(lesson, body)
+    return StreamingResponse(
+        chat_service.events(lesson, user["id"], rid, question, attempt),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"},
+    )
+
+
+@app.post("/api/lessons/{lesson_id}/chat/{request_id}/stop")
+def stop_chat(lesson_id: str, request_id: uuid.UUID, user=Depends(current_user)):
+    owned(lesson_id, user)
+    return chat_service.stop(lesson_id, str(request_id))
 
 
 @app.post("/api/lessons/{lesson_id}/chat")
@@ -556,14 +571,10 @@ async def chat(lesson_id: str, body: Chat, user=Depends(current_user)):
         raise HTTPException(400, "请输入问题")
     analysis = json.loads(lesson["analysis"])
     engine = "local-rules"
-    with connect() as db:
-        history = [
-            dict(r)
-            for r in db.execute(
-                "SELECT role,content FROM messages WHERE lesson_id=? ORDER BY id DESC LIMIT 8",
-                (lesson_id,),
-            ).fetchall()
-        ][::-1]
+    history = [
+        {"role": m["role"], "content": m["content"]}
+        for m in chat_service.history(lesson_id, completed_only=True)
+    ][-8:]
     context = {
         "summary": analysis["summary"],
         "metrics": analysis["metrics"],
@@ -663,6 +674,12 @@ def backup(user_id: str, user=Depends(admin)):
             "SELECT m.* FROM messages m JOIN lessons l ON l.id=m.lesson_id WHERE l.user_id=?",
             (user_id,),
         ).fetchall()
+        chat_turns = db.execute(
+            "SELECT t.* FROM chat_turns t JOIN lessons l ON l.id=t.lesson_id WHERE l.user_id=?",
+            (user_id,),
+        ).fetchall()
+        if any(t["status"] in {"running", "stopping"} for t in chat_turns):
+            raise HTTPException(409, "该账号仍有对话正在生成，请停止或完成后再备份")
     # Disk-backed temporary archive avoids holding classroom video files in memory.
     import tempfile
 
@@ -670,11 +687,12 @@ def backup(user_id: str, user=Depends(admin)):
     try:
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
             manifest = {
-                "schema": 1,
+                "schema": 2,
                 "exported_at": time.time(),
                 "user": dict(owner),
                 "lessons": [dict(r) for r in rows],
                 "messages": [dict(r) for r in chat_rows],
+                "chat_turns": [dict(r) for r in chat_turns],
             }
             z.writestr(
                 "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)

@@ -46,16 +46,10 @@ import {
   YAxis,
 } from "recharts";
 import { api, download, post, setCsrf, upload } from "./api";
-import type {
-  Analysis,
-  Lesson,
-  Message,
-  ModelSettings,
-  System,
-  User,
-} from "./types";
+import type { Analysis, Lesson, System, User } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
 import AssistantMessage from "./AssistantMessage";
+import { useChat } from "./useChat";
 import demoData from "./demo.json";
 import { STATIC_DEMO, PROJECT_URL } from "./runtime";
 
@@ -1007,96 +1001,31 @@ function ChatPanel({
   demo: boolean;
   notify: (s: string) => void;
 }) {
-  const [messages, setMessages] = useState<Message[]>([]),
-    [modelSettings, setModelSettings] = useState<ModelSettings | null>(null),
-    [value, setValue] = useState(""),
-    [busy, setBusy] = useState(false),
-    [typingIndex, setTypingIndex] = useState<number | null>(null);
+  const {
+    messages,
+    modelSettings,
+    busy,
+    stopping,
+    send: sendQuestion,
+    stop,
+  } = useChat(lesson, demo, notify);
+  const [value, setValue] = useState("");
   const scrollArea = useRef<HTMLDivElement>(null);
   const followOutput = useRef(true);
-  const pending = useRef<AbortController | null>(null);
-  const completeTyping = useCallback(() => setTypingIndex(null), []);
   const scrollToLatest = useCallback(() => {
-    if (followOutput.current && scrollArea.current) {
+    if (followOutput.current && scrollArea.current)
       scrollArea.current.scrollTop = scrollArea.current.scrollHeight;
-    }
   }, []);
-  useEffect(() => {
-    let active = true;
-    setMessages([]);
-    setModelSettings(null);
-    setTypingIndex(null);
-    setBusy(false);
-    followOutput.current = true;
-    if (!demo)
-      Promise.all([
-        api<Message[]>(`/lessons/${lesson.id}/chat`),
-        api<ModelSettings>("/model-settings"),
-      ])
-        .then(([history, settings]) => {
-          if (active) {
-            setMessages(history);
-            setModelSettings(settings);
-          }
-        })
-        .catch((e) => {
-          if (active) notify(err(e));
-        });
-    return () => {
-      active = false;
-      pending.current?.abort();
-      pending.current = null;
-    };
-  }, [lesson.id, demo]);
   useEffect(() => {
     scrollToLatest();
   }, [messages, busy, scrollToLatest]);
-  async function send(e?: FormEvent, question?: string) {
+  function send(e?: FormEvent, question?: string) {
     e?.preventDefault();
     const text = (question || value).trim();
-    if (
-      !text ||
-      busy ||
-      pending.current ||
-      typingIndex !== null ||
-      (!demo && !modelSettings)
-    )
-      return;
-    const controller = new AbortController();
-    pending.current = controller;
-    followOutput.current = true;
+    if (!text || busy || (!demo && !modelSettings)) return;
     setValue("");
-    setBusy(true);
-    setMessages((m) => [...m, { role: "user", content: text }]);
-    try {
-      let reply: Message;
-      if (demo) {
-        const s = lesson.analysis!.suggestions[0];
-        reply = {
-          role: "assistant",
-          content: `### 课堂观察\n\n${s.evidence}\n\n### 可以尝试\n\n1. **调整教学活动**：${s.action}\n2. **回看证据**：对照片段 #${s.segment_id}，记录学生的回应，再决定下一步调整。\n\n> 这是合成课堂的示例回答。实际教研需结合完整原文与课堂情境判断。\n\n本地部署登录后，可配置 Ollama 或 OpenAI 兼容服务进行追问。`,
-          engine: "demo",
-        };
-      } else
-        reply = await api<Message>(`/lessons/${lesson.id}/chat`, {
-          method: "POST",
-          body: JSON.stringify({ message: text }),
-          signal: controller.signal,
-        });
-      if (controller.signal.aborted) return;
-      setTypingIndex(messages.length + 1);
-      setMessages((m) => [...m, reply]);
-    } catch (e) {
-      if (controller.signal.aborted) return;
-      setMessages((m) => m.slice(0, -1));
-      setValue(text);
-      notify(err(e));
-    } finally {
-      if (pending.current === controller) {
-        pending.current = null;
-        setBusy(false);
-      }
-    }
+    followOutput.current = true;
+    void sendQuestion(text);
   }
   return (
     <div className="chat-panel">
@@ -1160,12 +1089,44 @@ function ChatPanel({
               {m.role === "assistant" ? (
                 <AssistantMessage
                   content={m.content}
-                  animate={typingIndex === i}
-                  onComplete={completeTyping}
+                  streaming={m.status === "running" || m.status === "stopping"}
                   onProgress={scrollToLatest}
                 />
               ) : (
                 <div className="message-bubble">{m.content}</div>
+              )}
+              {m.role === "assistant" &&
+                m.status &&
+                !["running", "stopping"].includes(m.status) && (
+                  <div className="reply-actions">
+                    <span role="status">
+                      {m.status === "stopped"
+                        ? "已停止 · 已保留收到的内容"
+                        : m.status === "error"
+                          ? "生成失败"
+                          : m.status === "interrupted"
+                            ? "生成中断"
+                            : "回答完成"}
+                    </span>
+                    {i === messages.length - 1 && m.request_id && (
+                      <button
+                        type="button"
+                        className="text-btn"
+                        disabled={busy}
+                        onClick={() => {
+                          followOutput.current = true;
+                          void sendQuestion(messages[i - 1].content, m);
+                        }}
+                      >
+                        {m.status === "completed" ? "重新生成" : "重试"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              {m.error && (
+                <p className="reply-error" role="alert">
+                  {m.error}
+                </p>
               )}
               {m.engine && (
                 <small>
@@ -1181,12 +1142,6 @@ function ChatPanel({
             </div>
           </div>
         ))}
-        {busy && (
-          <div className="thinking">
-            <CircleNotch className="spin" />
-            正在整理课堂证据…
-          </div>
-        )}
       </div>
       <form className="chat-input" onSubmit={send}>
         <input
@@ -1197,21 +1152,30 @@ function ChatPanel({
           placeholder="关于这堂课，你想再了解什么？"
           disabled={busy}
         />
-        <button
-          className="btn primary"
-          disabled={
-            busy ||
-            typingIndex !== null ||
-            !value.trim() ||
-            (!demo && !modelSettings)
-          }
-          aria-label="发送问题"
-        >
-          <ArrowRight size={21} />
-        </button>
+        {busy ? (
+          <button
+            type="button"
+            className="btn secondary stop-generation"
+            disabled={stopping}
+            onClick={() => void stop()}
+          >
+            {stopping ? "正在停止…" : "停止生成"}
+          </button>
+        ) : (
+          <button
+            className="btn primary"
+            disabled={!value.trim() || (!demo && !modelSettings)}
+            aria-label="发送问题"
+          >
+            <ArrowRight size={21} />
+          </button>
+        )}
       </form>
       <p className="chat-disclaimer">
-        建议供教研参考，请结合真实课堂情境判断。规则模式不等同于大模型对话。
+        {demo
+          ? "此处为模拟流式演示，不调用模型。"
+          : "模型回答实时接收，可随时停止；重试会替换最近一轮回答。"}
+        建议供教研参考。规则模式一次返回，不等同于大模型对话。
       </p>
     </div>
   );
