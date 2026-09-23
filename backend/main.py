@@ -199,7 +199,7 @@ class Chat(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "1.1.0", "processing": "local-only"}
+    return {"status": "ok", "version": app.version, "processing": "local-only"}
 
 
 @app.post("/api/auth/login")

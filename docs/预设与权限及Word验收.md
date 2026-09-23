@@ -39,3 +39,19 @@ sudo /opt/teachagent/current/deploy/rollback.sh /opt/teachagent/releases/OLD_REV
 ```
 
 回滚仅移除旧客户端不认识的生效设置 `preset_id` 字段，保留端点、密钥、账号、课堂和新增配置表。回滚脚本不会替换或删除课堂数据库。部署后的运行版本与健康状态另由服务器现场检查确认。
+
+## 服务器现场结果
+
+服务器 `43.165.169.59:8080` 的独立副本完成三阶段检验，全部退出码为 0：
+
+```text
+BASELINE: default=md; superadmin=false; presets=404; lessons=1; settings-save=200
+MODIFIED: default=docx; superadmin=true; preset=deepseek-chat; lessons=1
+ROLLBACK: default=md; superadmin=false; presets=404; lessons=1; settings-save=200
+```
+
+正式切换后，公网 HTTP 验证现有管理员登录、新建管理员、普通管理员创建教师、禁止越权（403）、两个模型预设独立保存与切换、跨账号配置隔离、真实 Word 下载及跨账号报告拒绝（404）。合成 Word 静态下载可打开；Whisper 和 FFmpeg 仍就绪。验收仅使用合成文本和无效测试 Key，未调用外部模型。
+
+数据库切换前已做一致性备份。对原有用户、密码、课堂、历史消息与模型设置逐表计算摘要，切换前后相同。临时验收课堂与账号在检查后清理，保留学校原有数据。
+
+功能提交 `ef72ef3` 的 GitHub Actions 测试、Pages 构建和部署全部成功：[工作流记录](https://github.com/mm477706421/TeachAgent/actions/runs/35814226711)。随后修正健康接口版本号，使其直接读取应用版本，避免硬编码版本落后。

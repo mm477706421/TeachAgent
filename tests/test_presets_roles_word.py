@@ -148,6 +148,7 @@ def test_superadmin_migration_and_admin_creation_boundary(clients):
 
 def test_word_download_is_real_docx_complete_and_isolated(clients):
     c, _ = clients
+    assert c["alice"].get("/api/health").json()["version"] == app.version
     lesson = (
         c["alice"]
         .post(
