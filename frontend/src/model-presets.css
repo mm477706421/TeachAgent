@@ -1,0 +1,129 @@
+.provider-directory {
+  margin: 24px 0;
+  min-width: 0;
+}
+.provider-directory-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.provider-directory-heading h3 {
+  margin: 0;
+}
+.provider-directory-heading p,
+.provider-summary p {
+  color: var(--muted, #66766a);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.provider-search {
+  margin: 12px 0 18px;
+}
+.provider-list {
+  max-height: 370px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 3px;
+}
+.provider-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  margin: 3px 0;
+}
+.provider-row:hover {
+  background: #f5f7f2;
+}
+.provider-row.selected {
+  background: #edf2eb;
+  border-color: #d4e0ce;
+}
+.provider-row:focus-visible {
+  outline: 2px solid #2d6848;
+  outline-offset: -2px;
+}
+.provider-dot {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c7d5e8;
+}
+.provider-dot.configured,
+.selected .provider-dot {
+  background: #32734e;
+}
+.provider-name {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.provider-name strong {
+  font-size: 14px;
+}
+.provider-name small {
+  font-size: 12px;
+  color: #738071;
+  overflow-wrap: anywhere;
+}
+.provider-status {
+  color: #7b827b;
+  font-size: 12px;
+  text-align: right;
+}
+.custom-provider {
+  margin-top: 12px;
+  border-color: #e0e7dc;
+}
+.provider-summary {
+  background: #f6f8f3;
+  border-left: 3px solid #578563;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.provider-summary > span {
+  display: block;
+  font-size: 12px;
+  color: #637760;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.provider-advanced {
+  margin: 18px 0;
+}
+.provider-advanced summary {
+  cursor: pointer;
+  color: #53644f;
+  padding: 8px 0;
+}
+.provider-advanced .model-parameters {
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  .provider-row {
+    padding: 14px 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .provider-status {
+    margin-left: 19px;
+    width: 100%;
+    text-align: left;
+  }
+  .provider-directory-heading .badge {
+    flex-shrink: 0;
+  }
+  .provider-list {
+    max-height: 330px;
+  }
+}

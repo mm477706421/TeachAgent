@@ -52,6 +52,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS model_settings (
           user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
           settings TEXT NOT NULL, api_key TEXT NOT NULL DEFAULT '', updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS model_profiles (
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          preset_id TEXT NOT NULL, settings TEXT NOT NULL,
+          api_key TEXT NOT NULL DEFAULT '', updated REAL NOT NULL,
+          PRIMARY KEY(user_id, preset_id));
         CREATE TABLE IF NOT EXISTS chat_turns (
           id TEXT PRIMARY KEY, lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
           question TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', engine TEXT,

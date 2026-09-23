@@ -12,6 +12,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ backend/
+COPY frontend/src/model-presets.json frontend/src/model-presets.json
 COPY examples/ examples/
 COPY --from=web /web/dist frontend/dist/
 RUN mkdir -p /app/.data /app/models && chown -R teachagent:teachagent /app

@@ -3,6 +3,7 @@ export interface User {
   username: string;
   name: string;
   role: "admin" | "teacher";
+  is_superadmin?: boolean;
 }
 export interface Metrics {
   characters: number;
@@ -104,6 +105,7 @@ export interface System {
 }
 
 export interface ModelSettings {
+  preset_id?: string;
   provider: "local" | "rules" | "openai";
   base_url: string;
   model: string;

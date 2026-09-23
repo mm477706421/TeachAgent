@@ -17,11 +17,18 @@ from . import config
 from .db import connect
 
 _key_lock = threading.Lock()
+PRESETS = {
+    item["id"]: item
+    for item in json.loads(
+        (config.ROOT / "frontend/src/model-presets.json").read_text(encoding="utf-8")
+    )
+}
 
 
 class ModelSettingsInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider: Literal["local", "rules", "openai"] = "local"
+    preset_id: str = Field(default="custom", max_length=40)
     base_url: str = Field(default="https://api.openai.com/v1", max_length=2048)
     model: str = Field(default="", max_length=200)
     api_key: SecretStr | None = None
@@ -30,6 +37,13 @@ class ModelSettingsInput(BaseModel):
     timeout_seconds: int = Field(default=60, ge=5, le=120)
     temperature: float = Field(default=0.3, ge=0, le=2, allow_inf_nan=False)
     max_tokens: int = Field(default=900, ge=128, le=4096)
+
+    @field_validator("preset_id")
+    @classmethod
+    def valid_preset(cls, value):
+        if value != "custom" and value not in PRESETS:
+            raise ValueError("未知模型预设")
+        return value
 
     @field_validator("api_key")
     @classmethod
@@ -105,7 +119,26 @@ def _read(user_id):
             "SELECT * FROM model_settings WHERE user_id=?", (user_id,)
         ).fetchone()
     defaults = ModelSettingsInput().model_dump(exclude={"api_key", "clear_api_key"})
-    return (json.loads(row["settings"]), row["api_key"]) if row else (defaults, "")
+    return (
+        ({**defaults, **json.loads(row["settings"])}, row["api_key"])
+        if row
+        else (defaults, "")
+    )
+
+
+def public_profiles(user_id):
+    with connect() as db:
+        rows = db.execute(
+            "SELECT settings,api_key FROM model_profiles WHERE user_id=?", (user_id,)
+        ).fetchall()
+    return [
+        {
+            **json.loads(row["settings"]),
+            "api_key_configured": bool(row["api_key"]),
+            "local_model": config.OLLAMA_MODEL,
+        }
+        for row in rows
+    ]
 
 
 def public_settings(user_id):
@@ -119,9 +152,25 @@ def public_settings(user_id):
 
 def prepare_settings(user_id, body):
     previous, encrypted = _read(user_id)
+    if body.provider == "openai" and body.preset_id != previous.get(
+        "preset_id", "custom"
+    ):
+        with connect() as db:
+            profile = db.execute(
+                "SELECT settings,api_key FROM model_profiles WHERE user_id=? AND preset_id=?",
+                (user_id, body.preset_id),
+            ).fetchone()
+        previous, encrypted = (
+            (json.loads(profile["settings"]), profile["api_key"])
+            if profile
+            else ({"base_url": ""}, "")
+        )
     settings = body.model_dump(exclude={"api_key", "clear_api_key"})
-    settings["base_url"] = normalize_base_url(body.base_url)
-    settings["model"] = body.model.strip()
+    if body.provider == "openai" and body.preset_id != "custom":
+        preset = PRESETS[body.preset_id]
+        settings.update(base_url=preset["base_url"], model=preset["model"])
+    settings["base_url"] = normalize_base_url(settings["base_url"])
+    settings["model"] = settings["model"].strip()
     if body.provider == "openai":
         if not settings["model"]:
             raise ModelError("请填写服务支持的模型 ID。", 400)
@@ -137,16 +186,51 @@ def prepare_settings(user_id, body):
         encrypted = ""
     if raw:
         encrypted = _cipher(create=True).encrypt(raw.encode()).decode()
+    if (
+        body.provider == "openai"
+        and body.preset_id != "custom"
+        and not encrypted
+        and not body.clear_api_key
+    ):
+        raise ModelError("请填写所选服务商的 API Key。", 400)
     return settings, encrypted
 
 
 def save_settings(user_id, body):
     settings, encrypted = prepare_settings(user_id, body)
     with connect() as db:
+        # Preserve independently encrypted credentials when switching providers.
+        old = db.execute(
+            "SELECT * FROM model_settings WHERE user_id=?", (user_id,)
+        ).fetchone()
+        if old:
+            prior = json.loads(old["settings"])
+            if prior["provider"] == "openai":
+                db.execute(
+                    "INSERT INTO model_profiles VALUES(?,?,?,?,?) ON CONFLICT(user_id,preset_id) DO UPDATE SET settings=excluded.settings,api_key=excluded.api_key,updated=excluded.updated",
+                    (
+                        user_id,
+                        prior.get("preset_id", "custom"),
+                        old["settings"],
+                        old["api_key"],
+                        time.time(),
+                    ),
+                )
         db.execute(
             "INSERT INTO model_settings VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET settings=excluded.settings,api_key=excluded.api_key,updated=excluded.updated",
             (user_id, json.dumps(settings), encrypted, time.time()),
         )
+        if settings["provider"] == "openai":
+            db.execute(
+                "INSERT INTO model_profiles VALUES(?,?,?,?,?) ON CONFLICT(user_id,preset_id) DO UPDATE SET settings=excluded.settings,api_key=excluded.api_key,updated=excluded.updated",
+                (
+                    user_id,
+                    settings["preset_id"],
+                    json.dumps(settings),
+                    encrypted,
+                    time.time(),
+                ),
+            )
     return public_settings(user_id)
 
 

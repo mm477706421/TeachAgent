@@ -30,8 +30,10 @@ test("Pages demo works under the repository path without classroom requests", as
     .getByRole("button", { name: "二次函数的图像与性质", exact: true })
     .click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载报告", exact: true }).click();
-  expect((await download).suggestedFilename()).toBe("TeachAgent-example.md");
+  await page
+    .getByRole("button", { name: "下载 Word 报告", exact: true })
+    .click();
+  expect((await download).suggestedFilename()).toBe("TeachAgent-example.docx");
   await page.getByRole("button", { name: "AI 追问", exact: true }).click();
   await page
     .getByRole("button", { name: "某个环节为何互动偏少，可以怎么改？" })

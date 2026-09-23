@@ -1203,6 +1203,13 @@ function LessonDetail({
   const video = useRef<HTMLVideoElement>(null),
     a = lesson.analysis;
   async function exportReport(format: string) {
+    if (demo && format === "docx") {
+      const link = document.createElement("a");
+      link.href = `${import.meta.env.BASE_URL}example-report.docx`;
+      link.download = "TeachAgent-example.docx";
+      link.click();
+      return;
+    }
     if (demo) {
       const content =
         format === "json"
@@ -1257,9 +1264,12 @@ function LessonDetail({
         </div>
         <div className="button-row">
           {a && (
-            <button className="btn primary" onClick={() => exportReport("md")}>
+            <button
+              className="btn primary"
+              onClick={() => exportReport("docx")}
+            >
               <DownloadSimple />
-              下载报告
+              下载 Word 报告
             </button>
           )}
           <button
@@ -1706,7 +1716,11 @@ function Settings({
           <h2>账号与密码</h2>
           <p className="subtle">
             {user.name} · {user.username} ·{" "}
-            {user.role === "admin" ? "管理员" : "教师"}
+            {user.is_superadmin
+              ? "超级管理员"
+              : user.role === "admin"
+                ? "管理员"
+                : "教师"}
           </p>
           {STATIC_DEMO ? (
             <div className="notice">
@@ -1756,7 +1770,7 @@ function Settings({
   );
 }
 
-function Admin({ notify }: { notify: (s: string) => void }) {
+function Admin({ notify, user }: { notify: (s: string) => void; user: User }) {
   const [users, setUsers] = useState<(User & { lessons: number })[]>([]),
     [logs, setLogs] = useState<
       {
@@ -1768,6 +1782,7 @@ function Admin({ notify }: { notify: (s: string) => void }) {
       }[]
     >([]),
     [create, setCreate] = useState(false),
+    [newRole, setNewRole] = useState<"teacher" | "admin">("teacher"),
     [busy, setBusy] = useState(false);
   function refresh() {
     Promise.all([
@@ -1800,12 +1815,35 @@ function Admin({ notify }: { notify: (s: string) => void }) {
         <div>
           <span className="eyebrow">SCHOOL ADMINISTRATION</span>
           <h1>学校数据管理</h1>
-          <p>统一管理教师账号，按账号导出学校教学资产。</p>
+          <p>
+            统一管理学校账号，按账号导出教学资产。只有超级管理员 admin
+            可创建其他管理员。
+          </p>
         </div>
-        <button className="btn primary" onClick={() => setCreate(true)}>
-          <Plus />
-          新建教师账号
-        </button>
+        <div className="button-row">
+          <button
+            className="btn primary"
+            onClick={() => {
+              setNewRole("teacher");
+              setCreate(true);
+            }}
+          >
+            <Plus />
+            新建教师账号
+          </button>
+          {user.is_superadmin && (
+            <button
+              className="btn secondary"
+              onClick={() => {
+                setNewRole("admin");
+                setCreate(true);
+              }}
+            >
+              <ShieldCheck />
+              新建管理员账号
+            </button>
+          )}
+        </div>
       </div>
       <Panel>
         <div className="section-heading">
@@ -1839,12 +1877,23 @@ function Admin({ notify }: { notify: (s: string) => void }) {
                     <strong>{u.name}</strong>
                     <small className="block subtle">{u.username}</small>
                   </td>
-                  <td>{u.role === "admin" ? "管理员" : "教师"}</td>
+                  <td>
+                    {u.is_superadmin
+                      ? "超级管理员"
+                      : u.role === "admin"
+                        ? "管理员"
+                        : "教师"}
+                  </td>
                   <td>{u.lessons}</td>
                   <td>
                     <button
                       className="btn secondary small"
-                      disabled={busy}
+                      disabled={
+                        busy ||
+                        (!user.is_superadmin &&
+                          u.role === "admin" &&
+                          u.id !== user.id)
+                      }
                       onClick={async () => {
                         setBusy(true);
                         try {
@@ -1890,7 +1939,10 @@ function Admin({ notify }: { notify: (s: string) => void }) {
         </div>
       </Panel>
       {create && (
-        <Modal title="新建教师账号" onClose={() => setCreate(false)}>
+        <Modal
+          title={newRole === "admin" ? "新建管理员账号" : "新建教师账号"}
+          onClose={() => setCreate(false)}
+        >
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -1898,11 +1950,13 @@ function Admin({ notify }: { notify: (s: string) => void }) {
               try {
                 await post("/admin/users", {
                   ...Object.fromEntries(new FormData(e.currentTarget)),
-                  role: "teacher",
+                  role: newRole,
                 });
                 setCreate(false);
                 refresh();
-                notify("教师账号已创建");
+                notify(
+                  newRole === "admin" ? "管理员账号已创建" : "教师账号已创建",
+                );
               } catch (e) {
                 notify(err(e));
               } finally {
@@ -1911,7 +1965,7 @@ function Admin({ notify }: { notify: (s: string) => void }) {
             }}
           >
             <label>
-              教师姓名
+              {newRole === "admin" ? "管理员姓名" : "教师姓名"}
               <input
                 name="name"
                 required
@@ -2261,9 +2315,11 @@ export default function App() {
               <small>
                 {demo
                   ? "示例体验账号"
-                  : user.role === "admin"
-                    ? "学校管理员"
-                    : "教师账号"}
+                  : user.is_superadmin
+                    ? "超级管理员"
+                    : user.role === "admin"
+                      ? "学校管理员"
+                      : "教师账号"}
               </small>
             </div>
             <button
@@ -2396,7 +2452,7 @@ export default function App() {
               onLogout={logout}
             />
           ) : page === "admin" && user.role === "admin" ? (
-            <Admin notify={notify} />
+            <Admin notify={notify} user={user} />
           ) : (
             <>
               <div className="page-heading">

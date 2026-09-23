@@ -36,7 +36,7 @@ from . import config
 from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
-from .reports import html_report, markdown
+from .reports import html_report, markdown, word_report
 from . import model_service, chat_service
 from .model_service import ModelError, ModelSettingsInput
 
@@ -57,7 +57,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.1.0",
+    version="1.2.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -138,7 +138,14 @@ def admin(user=Depends(current_user)):
 
 
 def public_user(user):
-    return {k: user[k] for k in ["id", "username", "name", "role"]}
+    return {
+        **{k: user[k] for k in ["id", "username", "name", "role"]},
+        "is_superadmin": is_superadmin(user),
+    }
+
+
+def is_superadmin(user):
+    return user["username"] == "admin" and user["role"] == "admin"
 
 
 def owned(lesson_id, user):
@@ -313,6 +320,11 @@ def update_model_settings(body: ModelSettingsInput, user=Depends(current_user)):
     result = model_service.save_settings(user["id"], body)
     audit(user["id"], "model_settings_changed", body.provider)
     return result
+
+
+@app.get("/api/model-settings/profiles")
+def get_model_profiles(user=Depends(current_user)):
+    return model_service.public_profiles(user["id"])
 
 
 @app.post("/api/model-settings/test")
@@ -507,7 +519,7 @@ def frame(lesson_id: str, filename: str, user=Depends(current_user)):
 
 
 @app.get("/api/lessons/{lesson_id}/report")
-def report(lesson_id: str, format: str = "md", user=Depends(current_user)):
+def report(lesson_id: str, format: str = "docx", user=Depends(current_user)):
     lesson = owned(lesson_id, user)
     if not lesson["analysis"]:
         raise HTTPException(409, "分析尚未完成")
@@ -521,12 +533,17 @@ def report(lesson_id: str, format: str = "md", user=Depends(current_user)):
             ),
             "application/json",
         )
+    elif format == "docx":
+        content, mime = (
+            word_report(lesson, analysis),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
     elif format == "md":
         content, mime = markdown(lesson, analysis), "text/markdown"
     elif format == "html":
         content, mime = html_report(lesson, analysis), "text/html"
     else:
-        raise HTTPException(400, "支持 md、json、html")
+        raise HTTPException(400, "支持 docx、md、json、html")
     audit(user["id"], "export_report", lesson_id)
     return Response(
         content,
@@ -622,11 +639,17 @@ def users(user=Depends(admin)):
         rows = db.execute(
             "SELECT u.id,u.username,u.name,u.role,u.created,COUNT(l.id) AS lessons FROM users u LEFT JOIN lessons l ON l.user_id=u.id GROUP BY u.id ORDER BY u.created"
         ).fetchall()
-    return [dict(r) for r in rows]
+    return [{**dict(r), "is_superadmin": is_superadmin(r)} for r in rows]
 
 
 @app.post("/api/admin/users", status_code=201)
 def create_user(body: NewUser, user=Depends(admin)):
+    if body.role == "admin" and not is_superadmin(user):
+        raise HTTPException(403, "仅超级管理员 admin 可创建管理员账号")
+    if body.username.lower() == "admin":
+        raise HTTPException(
+            409, "admin 为保留的超级管理员账号，请通过服务器初始化命令管理"
+        )
     if (
         body.role not in {"teacher", "admin"}
         or not re.fullmatch(r"[A-Za-z0-9_.-]{3,64}", body.username)
@@ -665,6 +688,12 @@ def backup(user_id: str, user=Depends(admin)):
         ).fetchone()
         if not owner:
             raise HTTPException(404, "账号不存在")
+        if (
+            owner["role"] == "admin"
+            and owner["id"] != user["id"]
+            and not is_superadmin(user)
+        ):
+            raise HTTPException(403, "仅超级管理员可导出其他管理员的备份")
         rows = db.execute(
             "SELECT * FROM lessons WHERE user_id=?", (user_id,)
         ).fetchall()
@@ -738,6 +767,14 @@ def audit_log(user=Depends(admin)):
 dist = config.ROOT / "frontend" / "dist"
 if dist.exists():
     app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+
+    @app.get("/example-report.docx", include_in_schema=False)
+    def example_word_report():
+        return FileResponse(
+            dist / "example-report.docx",
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename="TeachAgent-example.docx",
+        )
 
     @app.get("/{path:path}")
     def frontend(path: str):

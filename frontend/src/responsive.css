@@ -348,3 +348,19 @@ textarea {
     gap: 20px;
   }
 }
+
+/* Account creation actions wrap independently on small screens. */
+.page-heading > .button-row {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .page-heading:has(> .button-row) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-heading > .button-row > .btn {
+    flex: 1 1 160px;
+  }
+}

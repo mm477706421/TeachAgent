@@ -6,8 +6,11 @@ import {
 } from "@phosphor-icons/react";
 import { api, post } from "./api";
 import type { ModelSettings } from "./types";
+import presets from "./model-presets.json";
+import "./model-presets.css";
 
 const defaults: ModelSettings = {
+  preset_id: "custom",
   provider: "local",
   base_url: "https://api.openai.com/v1",
   model: "",
@@ -35,13 +38,51 @@ export default function ModelSettingsPanel({
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const [ready, setReady] = useState(demo);
+  const [search, setSearch] = useState("");
+  const [profiles, setProfiles] = useState<ModelSettings[]>([]);
+  const selected = presets.find((p) => p.id === value.preset_id);
+  function choosePreset(id: string) {
+    if ((value.preset_id || "custom") === id) return;
+    const preset = presets.find((p) => p.id === id);
+    const saved = profiles.find((p) => (p.preset_id || "custom") === id);
+    setValue(
+      saved || {
+        ...defaults,
+        provider: "openai",
+        preset_id: id,
+        base_url: preset?.base_url || defaults.base_url,
+        model: preset?.model || "",
+        local_model: value.local_model,
+      },
+    );
+    setKey("");
+    setClearKey(false);
+    setSavedBase(saved?.base_url || preset?.base_url || defaults.base_url);
+    setResult("");
+    setError("");
+  }
   useEffect(() => {
     if (demo) return;
     let active = true;
-    api<ModelSettings>("/model-settings")
-      .then((data) => {
+    Promise.all([
+      api<ModelSettings>("/model-settings"),
+      api<ModelSettings[]>("/model-settings/profiles"),
+    ])
+      .then(([data, saved]) => {
         if (active) {
           setValue(data);
+          setProfiles(
+            data.provider === "openai"
+              ? [
+                  ...saved.filter(
+                    (p) =>
+                      (p.preset_id || "custom") !==
+                      (data.preset_id || "custom"),
+                  ),
+                  data,
+                ]
+              : saved,
+          );
           setSavedBase(data.base_url);
           setReady(true);
         }
@@ -86,6 +127,13 @@ export default function ModelSettingsPanel({
           body: JSON.stringify(payload),
         });
         setValue(data);
+        if (data.provider === "openai")
+          setProfiles((items) => [
+            ...items.filter(
+              (p) => (p.preset_id || "custom") !== (data.preset_id || "custom"),
+            ),
+            data,
+          ]);
         setSavedBase(data.base_url);
         setKey("");
         setClearKey(false);
@@ -153,34 +201,145 @@ export default function ModelSettingsPanel({
               </label>
               {value.provider === "openai" ? (
                 <>
-                  <div className="form-grid">
-                    <label>
-                      Base URL
+                  <div className="provider-directory">
+                    <div className="provider-directory-heading">
+                      <div>
+                        <h3>云端模型预设</h3>
+                        <p>选择服务商，填写 Key 即可；接口与默认模型已就绪。</p>
+                      </div>
+                      <span className="badge">{presets.length} 个预设</span>
+                    </div>
+                    <label className="provider-search">
+                      搜索提供方
                       <input
-                        type="url"
-                        value={value.base_url}
-                        onChange={(e) => change("base_url", e.target.value)}
-                        required
-                        maxLength={2048}
-                        placeholder="https://api.example.com/v1"
+                        type="search"
+                        placeholder="搜索提供方或模型…"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                       />
                     </label>
-                    <label>
-                      模型 ID
-                      <input
-                        value={value.model}
-                        onChange={(e) => change("model", e.target.value)}
-                        required
-                        maxLength={200}
-                        placeholder="填写服务商支持的模型名"
-                      />
-                    </label>
+                    <div className="provider-list" aria-label="云端模型提供方">
+                      {presets
+                        .filter((p) =>
+                          `${p.name} ${p.model}`
+                            .toLowerCase()
+                            .includes(search.toLowerCase()),
+                        )
+                        .map((preset) => {
+                          const configured = profiles.some(
+                            (p) =>
+                              p.preset_id === preset.id && p.api_key_configured,
+                          );
+                          return (
+                            <button
+                              type="button"
+                              key={preset.id}
+                              className={`provider-row ${value.preset_id === preset.id ? "selected" : ""}`}
+                              aria-pressed={value.preset_id === preset.id}
+                              onClick={() => choosePreset(preset.id)}
+                            >
+                              <span
+                                className={`provider-dot ${configured ? "configured" : ""}`}
+                              />
+                              <span className="provider-name">
+                                <strong>{preset.name}</strong>
+                                <small>{preset.description}</small>
+                              </span>
+                              <span className="provider-status">
+                                {configured
+                                  ? "已保存 Key"
+                                  : `填写 ${preset.name} Key`}
+                                <span aria-hidden="true"> ›</span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      {!presets.some((p) =>
+                        `${p.name} ${p.model}`
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                      ) && (
+                        <p className="subtle">
+                          未找到服务商，可使用下方自定义端点。
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={`provider-row custom-provider ${!selected ? "selected" : ""}`}
+                      aria-pressed={!selected}
+                      onClick={() => choosePreset("custom")}
+                    >
+                      <span className="provider-dot" />
+                      <span className="provider-name">
+                        <strong>本地 / 自定义端点</strong>
+                        <small>
+                          自填 OpenAI 兼容地址与模型，支持 HTTP / HTTPS
+                        </small>
+                      </span>
+                      <span aria-hidden="true">›</span>
+                    </button>
                   </div>
-                  <p className="subtle">
-                    填写 API 前缀（通常含 /v1），系统调用
-                    /chat/completions。支持 HTTP 和 HTTPS，可填写域名或 IP
-                    地址。
-                  </p>
+                  {selected && (
+                    <div className="provider-summary">
+                      <strong>当前配置：{selected.name}</strong>
+                      <span>
+                        {selected.model} · {selected.base_url}
+                      </span>
+                      <p>
+                        预设已填写接口和模型；同一账号可分别保存各服务商的
+                        Key。切换并保存后，下一次追问使用当前服务。
+                      </p>
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={() => {
+                          setValue({
+                            ...value,
+                            preset_id: "custom",
+                            api_key_configured: false,
+                          });
+                          setKey("");
+                          setClearKey(false);
+                          setResult("");
+                        }}
+                      >
+                        使用此地址自定义模型
+                      </button>
+                    </div>
+                  )}
+                  {!selected && (
+                    <>
+                      <div className="form-grid">
+                        <label>
+                          Base URL
+                          <input
+                            type="url"
+                            value={value.base_url}
+                            onChange={(e) => change("base_url", e.target.value)}
+                            required
+                            maxLength={2048}
+                            placeholder="https://api.example.com/v1"
+                          />
+                        </label>
+                        <label>
+                          模型 ID
+                          <input
+                            value={value.model}
+                            onChange={(e) => change("model", e.target.value)}
+                            required
+                            maxLength={200}
+                            placeholder="填写服务商支持的模型名"
+                          />
+                        </label>
+                      </div>
+                      <p className="subtle">
+                        填写 API 前缀（通常含 /v1），系统调用
+                        /chat/completions。支持 HTTP 和 HTTPS，可填写域名或 IP
+                        地址。
+                      </p>
+                    </>
+                  )}
                   {demo ? (
                     <div className="privacy-note">
                       <ShieldCheck size={21} />
@@ -195,6 +354,9 @@ export default function ModelSettingsPanel({
                         API Key
                         <input
                           type="password"
+                          required={
+                            !!selected && !value.api_key_configured && !clearKey
+                          }
                           value={key}
                           onChange={(e) => {
                             setKey(e.target.value);
@@ -205,9 +367,12 @@ export default function ModelSettingsPanel({
                           autoComplete="new-password"
                           spellCheck={false}
                           placeholder={
-                            value.api_key_configured
+                            value.api_key_configured &&
+                            value.base_url === savedBase
                               ? "已保存；留空保留，不会回显密钥"
-                              : "可选：免鉴权的兼容服务可留空"
+                              : selected
+                                ? `填写 ${selected.name} API Key`
+                                : "可选：免鉴权的兼容服务可留空"
                           }
                         />
                       </label>
@@ -233,48 +398,51 @@ export default function ModelSettingsPanel({
                         )}
                     </>
                   )}
-                  <div className="model-parameters">
-                    <label>
-                      超时（秒）
-                      <input
-                        type="number"
-                        min={5}
-                        max={120}
-                        required
-                        value={value.timeout_seconds}
-                        onChange={(e) =>
-                          change("timeout_seconds", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <label>
-                      温度
-                      <input
-                        type="number"
-                        min={0}
-                        max={2}
-                        step={0.1}
-                        required
-                        value={value.temperature}
-                        onChange={(e) =>
-                          change("temperature", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <label>
-                      输出 token 上限
-                      <input
-                        type="number"
-                        min={128}
-                        max={4096}
-                        required
-                        value={value.max_tokens}
-                        onChange={(e) =>
-                          change("max_tokens", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                  </div>
+                  <details className="provider-advanced">
+                    <summary>高级生成参数（可选）</summary>
+                    <div className="model-parameters">
+                      <label>
+                        超时（秒）
+                        <input
+                          type="number"
+                          min={5}
+                          max={120}
+                          required
+                          value={value.timeout_seconds}
+                          onChange={(e) =>
+                            change("timeout_seconds", Number(e.target.value))
+                          }
+                        />
+                      </label>
+                      <label>
+                        温度
+                        <input
+                          type="number"
+                          min={0}
+                          max={2}
+                          step={0.1}
+                          required
+                          value={value.temperature}
+                          onChange={(e) =>
+                            change("temperature", Number(e.target.value))
+                          }
+                        />
+                      </label>
+                      <label>
+                        输出 token 上限
+                        <input
+                          type="number"
+                          min={128}
+                          max={4096}
+                          required
+                          value={value.max_tokens}
+                          onChange={(e) =>
+                            change("max_tokens", Number(e.target.value))
+                          }
+                        />
+                      </label>
+                    </div>
+                  </details>
                   <div className="notice model-consent">
                     <strong>启用后的数据流向</strong>
                     <p>

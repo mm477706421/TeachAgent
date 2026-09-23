@@ -1,0 +1,79 @@
+[
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "description": "通用教学分析 · DeepSeek V3"
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "base_url": "https://api.openai.com/v1",
+    "model": "gpt-4.1-mini",
+    "description": "GPT-4.1 mini"
+  },
+  {
+    "id": "qwen",
+    "name": "通义千问 · 中国内地",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "model": "qwen-plus",
+    "description": "阿里云百炼 · Qwen Plus"
+  },
+  {
+    "id": "moonshot",
+    "name": "Moonshot / Kimi",
+    "base_url": "https://api.moonshot.cn/v1",
+    "model": "moonshot-v1-8k",
+    "description": "Moonshot V1 · 8K"
+  },
+  {
+    "id": "zhipu",
+    "name": "智谱 GLM",
+    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "model": "glm-4-flash",
+    "description": "GLM-4 Flash"
+  },
+  {
+    "id": "siliconflow",
+    "name": "硅基流动",
+    "base_url": "https://api.siliconflow.cn/v1",
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "description": "Qwen2.5 7B Instruct"
+  },
+  {
+    "id": "openrouter",
+    "name": "OpenRouter",
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "openai/gpt-4.1-mini",
+    "description": "模型聚合 · GPT-4.1 mini"
+  },
+  {
+    "id": "fireworks",
+    "name": "Fireworks AI",
+    "base_url": "https://api.fireworks.ai/inference/v1",
+    "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    "description": "Llama 3.3 70B Instruct"
+  },
+  {
+    "id": "xai",
+    "name": "xAI",
+    "base_url": "https://api.x.ai/v1",
+    "model": "grok-4-1-fast-non-reasoning",
+    "description": "Grok 4.1 Fast"
+  },
+  {
+    "id": "minimax",
+    "name": "MiniMax",
+    "base_url": "https://api.minimax.io/v1",
+    "model": "MiniMax-M2.5",
+    "description": "国际服务 · MiniMax M2.5"
+  },
+  {
+    "id": "minimax-cn",
+    "name": "MiniMax (China)",
+    "base_url": "https://api.minimaxi.com/v1",
+    "model": "MiniMax-M2.5",
+    "description": "中国服务 · MiniMax M2.5"
+  }
+]

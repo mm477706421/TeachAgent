@@ -105,8 +105,10 @@ test("real login, text import, report download, local chat, admin and logout", a
     page.getByRole("heading", { name: "浏览器验收课堂", exact: true }),
   ).toBeVisible();
   const d = page.waitForEvent("download");
-  await page.getByRole("button", { name: "下载报告", exact: true }).click();
-  expect((await d).suggestedFilename()).toMatch(/\.md$/);
+  await page
+    .getByRole("button", { name: "下载 Word 报告", exact: true })
+    .click();
+  expect((await d).suggestedFilename()).toMatch(/\.docx$/);
   await page.getByRole("button", { name: "AI 追问", exact: true }).click();
   await page
     .getByRole("textbox", { name: "向教研助手提问" })
