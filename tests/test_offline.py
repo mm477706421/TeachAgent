@@ -1,6 +1,13 @@
 from backend import config
 
 
+def test_asr_runtime_imports_with_declared_dependencies():
+    # faster-whisper imports requests even when newer huggingface-hub no longer requires it.
+    from faster_whisper import WhisperModel
+
+    assert callable(WhisperModel)
+
+
 def test_incomplete_model_cannot_trigger_tokenizer_download(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MODEL", tmp_path)
     (tmp_path / "model.bin").write_bytes(b"weights")
