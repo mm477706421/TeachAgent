@@ -36,7 +36,7 @@ header.text = "TEACHAGENT     /     学校本地课堂洞察与教学成长工�
 header.style = styles["Caption"]
 footer = section.footer.paragraphs[0]
 footer.text = (
-    "TeachAgent 1.1.0    ·    功能与部署文档                                      "
+    "TeachAgent 1.3.0    ·    功能与部署文档                                      "
 )
 field = OxmlElement("w:fldSimple")
 field.set(qn("w:instr"), "PAGE")

@@ -37,7 +37,7 @@ from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
 from .reports import html_report, markdown, word_report
-from . import model_service, chat_service
+from . import model_service, chat_service, iflytek_asr
 from .model_service import ModelError, ModelSettingsInput
 
 
@@ -57,7 +57,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.2.0",
+    version="1.3.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -199,7 +199,11 @@ class Chat(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": app.version, "processing": "local-only"}
+    return {
+        "status": "ok",
+        "version": app.version,
+        "processing": "local-default-optional-cloud",
+    }
 
 
 @app.post("/api/auth/login")
@@ -295,6 +299,7 @@ def system(user=Depends(current_user)):
     return {
         "local_only": settings["provider"] != "openai",
         "asr_ready": config.model_ready(),
+        "iflytek_ready": iflytek_asr.ready(),
         "ffmpeg_ready": bool(shutil.which(config.FFMPEG)),
         "ffprobe_ready": bool(shutil.which(config.FFPROBE)),
         "probe_backend": "ffprobe" if shutil.which(config.FFPROBE) else "PyAV",
@@ -377,8 +382,17 @@ async def upload(
     subject: str = Form("综合"),
     class_name: str = Form(""),
     file: UploadFile = File(...),
+    asr_provider: str = Form("local"),
+    allow_cloud_audio: bool = Form(False),
     user=Depends(current_user),
 ):
+    if asr_provider not in {"local", "iflytek"}:
+        raise HTTPException(400, "未知语音转写服务")
+    if asr_provider == "iflytek":
+        if not allow_cloud_audio:
+            raise HTTPException(400, "使用讯飞须明确同意发送课堂音频，包括重试任务。")
+        if not iflytek_asr.ready():
+            raise HTTPException(400, "讯飞尚未配置，请联系管理员设置服务认证信息。")
     name = Path((file.filename or "").replace("\\", "/")).name
     if Path(name).suffix.lower() not in {
         ".mp4",
@@ -410,11 +424,13 @@ async def upload(
         await file.close()
     with connect() as db:
         db.execute(
-            "UPDATE lessons SET status='queued', stage='等待本地处理' WHERE id=?",
-            (lesson_id,),
+            "UPDATE lessons SET status='queued', stage='等待处理', asr_provider=? WHERE id=?",
+            (asr_provider, lesson_id),
         )
     submit(lesson_id)
     audit(user["id"], "upload", lesson_id)
+    if asr_provider == "iflytek":
+        audit(user["id"], "cloud_audio_consent", lesson_id)
     return serialized(owned(lesson_id, user), True)
 
 

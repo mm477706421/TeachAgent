@@ -1,7 +1,7 @@
 services:
   teachagent:
     build: .
-    image: teachagent:1.0.0
+    image: teachagent:1.3.0
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
@@ -10,6 +10,9 @@ services:
       ASR_COMPUTE: int8
       MAX_UPLOAD_MB: 2048
       COOKIE_SECURE: "0"
+      IFLYTEK_APP_ID: ${IFLYTEK_APP_ID:-}
+      IFLYTEK_API_KEY: ${IFLYTEK_API_KEY:-}
+      IFLYTEK_API_SECRET: ${IFLYTEK_API_SECRET:-}
     volumes:
       - teachagent-data:/app/.data
       - ./models:/app/models:ro

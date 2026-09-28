@@ -166,36 +166,55 @@ def process(lesson_id):
                 str(audio),
             ]
         )
-        if not config.model_ready():
-            raise ValueError(
-                "未找到本地 Whisper 模型。请将完整 faster-whisper 模型放入 ASR_MODEL_PATH 后重试；系统不会在线下载。"
-            )
-        update(lesson_id, progress=35, stage="Whisper 正在本地转写")
-        if _model is None:
-            from faster_whisper import WhisperModel
+        provider = lesson["asr_provider"]
+        if provider == "iflytek":
+            from .iflytek_asr import transcribe
 
-            _model = WhisperModel(
-                str(config.MODEL),
-                device=config.ASR_DEVICE,
-                compute_type=config.ASR_COMPUTE,
-                local_files_only=True,
+            update(lesson_id, progress=35, stage="讯飞云端转写：正在发送音频")
+            segments = transcribe(
+                audio,
+                lambda fraction: update(
+                    lesson_id, progress=min(85, 35 + int(fraction * 50))
+                ),
             )
-        stream, _ = _model.transcribe(
-            str(audio), language="zh", beam_size=5, vad_filter=True
-        )
-        segments = []
-        for s in stream:
-            segments.append(
-                {
-                    "start": round(s.start, 2),
-                    "end": round(s.end, 2),
-                    "text": s.text,
-                    "timing": "asr",
-                }
+        else:
+            if not config.model_ready():
+                raise ValueError(
+                    "未找到本地 Whisper 模型。请将完整 faster-whisper 模型放入 ASR_MODEL_PATH 后重试；系统不会在线下载。"
+                )
+            update(lesson_id, progress=35, stage="Whisper 正在本地转写")
+            if _model is None:
+                from faster_whisper import WhisperModel
+
+                _model = WhisperModel(
+                    str(config.MODEL),
+                    device=config.ASR_DEVICE,
+                    compute_type=config.ASR_COMPUTE,
+                    local_files_only=True,
+                )
+            stream, _ = _model.transcribe(
+                str(audio), language="zh", beam_size=5, vad_filter=True
             )
-            update(lesson_id, progress=min(85, 35 + int(s.end / max(duration, 1) * 50)))
+            segments = []
+            for s in stream:
+                segments.append(
+                    {
+                        "start": round(s.start, 2),
+                        "end": round(s.end, 2),
+                        "text": s.text,
+                        "timing": "asr",
+                    }
+                )
+                update(
+                    lesson_id, progress=min(85, 35 + int(s.end / max(duration, 1) * 50))
+                )
         update(lesson_id, progress=90, stage="正在蒸馏话语与生成教学画像")
         result = analyze(segments, duration)
+        result["asr_provider"] = provider
+        if provider == "iflytek":
+            result["limitations"].append(
+                "本课音频已发送至科大讯飞；时间戳是 8 秒音频块范围，并非逐句对齐。切分处可能影响识别，语速及环节时长仅供参考。"
+            )
         (folder / "analysis.json").write_text(
             json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
         )

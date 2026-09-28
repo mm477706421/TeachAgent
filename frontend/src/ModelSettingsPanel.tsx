@@ -162,7 +162,7 @@ export default function ModelSettingsPanel({
               模型服务设置
             </h2>
             <p>
-              按账号独立配置，仅用于教研追问；基础课堂分析与语音转写始终在本地。
+              按账号独立配置，仅用于教研追问；基础课堂分析在本地，语音转写服务在上传时单独选择。
             </p>
           </div>
           <span className="badge green">账号独立</span>

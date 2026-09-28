@@ -356,7 +356,8 @@ function UploadModal({
     [progress, setProgress] = useState(0),
     [error, setError] = useState(""),
     [drag, setDrag] = useState(false),
-    [text, setText] = useState("");
+    [text, setText] = useState(""),
+    [asrProvider, setAsrProvider] = useState("local");
   const input = useRef<HTMLInputElement>(null);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -458,6 +459,38 @@ function UploadModal({
         </div>
         {mode === "video" ? (
           <>
+            <label>
+              语音转写服务
+              <select
+                name="asr_provider"
+                value={asrProvider}
+                disabled={busy}
+                onChange={(e) => setAsrProvider(e.target.value)}
+              >
+                <option value="local">本地 Whisper（音频不出服务器）</option>
+                <option value="iflytek">科大讯飞（云端语音听写）</option>
+              </select>
+            </label>
+            {asrProvider === "iflytek" && (
+              <div className="model-consent">
+                <p>
+                  需要管理员在服务器配置讯飞听写服务。按 8
+                  秒分段发送音频，可能产生服务费用；时间仅定位音频块，不保证逐句对齐。处理约需视频时长或更久。
+                </p>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="allow_cloud_audio"
+                    value="true"
+                    required
+                    disabled={busy || demo}
+                  />
+                  <span>
+                    我已获得授权，同意本次及重试任务将课堂音频发送到科大讯飞。
+                  </span>
+                </label>
+              </div>
+            )}
             <button
               type="button"
               disabled={busy}
@@ -531,9 +564,13 @@ function UploadModal({
         <div className="privacy-note">
           <ShieldCheck size={20} />
           <p>
-            <strong>视频转写与分析在本地完成</strong>
+            <strong>
+              {mode === "video" && asrProvider === "iflytek"
+                ? "云端转写 · 本地分析"
+                : "视频转写与分析在本地完成"}
+            </strong>
             <span>
-              视频与文本保存至本地服务器；启用兼容模型后，追问会发送文本上下文。
+              视频与文本保存至本地服务器；选择讯飞会发送音频，启用兼容模型后追问会发送文本上下文。
             </span>
           </p>
         </div>
@@ -547,7 +584,7 @@ function UploadModal({
             <progress max={100} value={progress} />
             <span>
               {mode === "video"
-                ? `上传 ${progress}% · 上传完成后将进入本地处理队列`
+                ? `上传 ${progress}% · 上传完成后将进入处理队列`
                 : "正在生成文本分析…"}
             </span>
           </div>
@@ -1254,6 +1291,9 @@ function LessonDetail({
         <div>
           <div className="inline-badges">
             <Badge>{lesson.subject}</Badge>
+            {lesson.asr_provider === "iflytek" && (
+              <Badge tone="amber">讯飞云端转写 · 音频已授权外发</Badge>
+            )}
             {!!lesson.example && <Badge tone="amber">合成示例</Badge>}
           </div>
           <h1>{lesson.title}</h1>
@@ -1293,7 +1333,7 @@ function LessonDetail({
             )}
             <h2>{lesson.stage}</h2>
             <p>
-              {lesson.error || "视频抽帧 → 本地语音转写 → 文本蒸馏 → 教学分析"}
+              {lesson.error || "视频抽帧 → 语音转写 → 本地文本蒸馏 → 教学分析"}
             </p>
             <progress max={100} value={lesson.progress} />
             <span>{lesson.progress}%</span>
@@ -1519,6 +1559,11 @@ function LessonDetail({
                             )}
                           </div>
                           <p>{s.text}</p>
+                          {s.timing === "chunk" && (
+                            <small className="subtle">
+                              音频块时间范围，非逐句对齐
+                            </small>
+                          )}
                           {s.timing === "estimated" && (
                             <small className="subtle">时间为估算</small>
                           )}
@@ -1688,6 +1733,12 @@ function Settings({
                     ? "FFmpeg + " + system.probe_backend + " 已就绪"
                     : "FFmpeg 待安装",
                 ],
+                [
+                  "讯飞语音听写",
+                  system.iflytek_ready
+                    ? "已配置（未验证额度与权限）"
+                    : "未配置（可选）",
+                ],
                 ["计算设备", system.asr_device.toUpperCase()],
                 ["视频大小上限", `${system.max_upload_mb} MB`],
                 ["可用磁盘", `${system.disk_free_gb} GB`],
@@ -1760,7 +1811,8 @@ function Settings({
       <Panel className="method-panel">
         <h3>一期能力范围</h3>
         <p>
-          本地视频抽帧、语音转写、文本清洗、教学环节识别、教学画像、证据建议与本地追问。每位教师拥有独立数据空间。
+          本地视频抽帧、文本清洗、教学环节识别、教学画像与证据建议。转写默认使用本地
+          Whisper，也可在上传时授权讯飞云端转写；追问服务单独配置。每位教师拥有独立数据空间。
         </p>
         <p>
           动作识别、板书识别、声纹分离与多模态教学评价属于扩展功能。当前画像不输出缺乏依据的教师评分或师生发言比例。
@@ -2599,6 +2651,11 @@ export default function App() {
               这是 GitHub Pages
               上的合成课堂演示。真实视频、教师登录、离线转写与本地 AI
               追问，请使用学校服务器上的 TeachAgent。
+            </p>
+            <p className="notice">
+              1.3.0
+              支持可选科大讯飞语音听写：学校服务器配置认证信息后，教师在上传时授权音频外发。默认仍为本地
+              Whisper。此演示不接收音频或密钥。
             </p>
             <div className="modal-actions">
               <button

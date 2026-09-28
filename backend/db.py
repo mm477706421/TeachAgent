@@ -64,6 +64,11 @@ def init_db():
         CREATE UNIQUE INDEX IF NOT EXISTS one_active_chat ON chat_turns(lesson_id)
           WHERE status IN ('running','stopping');
         """)
+        columns = {row[1] for row in db.execute("PRAGMA table_info(lessons)")}
+        if "asr_provider" not in columns:
+            db.execute(
+                "ALTER TABLE lessons ADD COLUMN asr_provider TEXT NOT NULL DEFAULT 'local'"
+            )
 
 
 def password_hash(password: str) -> str:

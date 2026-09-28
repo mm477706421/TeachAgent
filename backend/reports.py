@@ -150,7 +150,7 @@ def markdown(lesson, analysis):
         f"学科：{lesson['subject']}　班级：{lesson['class_name']}",
         "",
         "> 数据性质："
-        + ("合成示例，仅用于体验。" if lesson["example"] else "本地课堂转写分析。"),
+        + ("合成示例，仅用于体验。" if lesson["example"] else "课堂转写与教学分析；转写来源及时间精度请见方法边界。"),
         "",
         "## 授课方式画像",
         "",

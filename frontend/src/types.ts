@@ -57,6 +57,7 @@ export interface Analysis {
   limitations: string[];
 }
 export interface Lesson {
+  asr_provider?: "local" | "iflytek";
   id: string;
   user_id: string;
   title: string;
@@ -94,6 +95,7 @@ export interface Message {
 export interface System {
   local_only: boolean;
   asr_ready: boolean;
+  iflytek_ready?: boolean;
   ffmpeg_ready: boolean;
   ffprobe_ready: boolean;
   probe_backend: string;
