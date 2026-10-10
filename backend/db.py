@@ -57,6 +57,12 @@ def init_db():
           preset_id TEXT NOT NULL, settings TEXT NOT NULL,
           api_key TEXT NOT NULL DEFAULT '', updated REAL NOT NULL,
           PRIMARY KEY(user_id, preset_id));
+        CREATE TABLE IF NOT EXISTS library_videos (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+          title TEXT NOT NULL, subject TEXT NOT NULL, description TEXT NOT NULL,
+          filename TEXT NOT NULL, size INTEGER NOT NULL, duration REAL NOT NULL,
+          created REAL NOT NULL);
+        CREATE INDEX IF NOT EXISTS library_owner ON library_videos(user_id, created);
         CREATE TABLE IF NOT EXISTS chat_turns (
           id TEXT PRIMARY KEY, lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
           question TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', engine TEXT,

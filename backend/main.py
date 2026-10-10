@@ -37,7 +37,7 @@ from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
 from .reports import html_report, markdown, word_report
-from . import model_service, chat_service, iflytek_asr
+from . import model_service, chat_service, iflytek_asr, library
 from .model_service import ModelError, ModelSettingsInput
 
 
@@ -57,7 +57,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.3.0",
+    version="1.4.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -509,18 +509,24 @@ def delete_lesson(lesson_id: str, user=Depends(current_user)):
 
 
 @app.get("/api/lessons/{lesson_id}/media")
-def media(lesson_id: str, user=Depends(current_user)):
+def media(lesson_id: str, download: bool = False, user=Depends(current_user)):
     lesson = owned(lesson_id, user)
     path = lesson_dir(user["id"], lesson_id) / "source.video"
     if not path.exists():
         raise HTTPException(404, "此课堂没有视频")
+    if lesson["status"] == "uploading":
+        raise HTTPException(409, "视频尚未传输完成，请稍后再试")
     mime = {
         ".webm": "video/webm",
         ".mov": "video/quicktime",
         ".avi": "video/x-msvideo",
         ".mkv": "video/x-matroska",
     }.get(Path(lesson["filename"] or "").suffix.lower(), "video/mp4")
-    return FileResponse(path, media_type=mime)
+    return FileResponse(
+        path,
+        media_type=mime,
+        filename=(lesson["filename"] or "classroom.mp4") if download else None,
+    )
 
 
 @app.get("/api/lessons/{lesson_id}/frames/{filename}")
@@ -713,6 +719,9 @@ def backup(user_id: str, user=Depends(admin)):
         rows = db.execute(
             "SELECT * FROM lessons WHERE user_id=?", (user_id,)
         ).fetchall()
+        shared_videos = db.execute(
+            "SELECT * FROM library_videos WHERE user_id=?", (user_id,)
+        ).fetchall()
         if any(r["status"] in {"queued", "processing", "uploading"} for r in rows):
             raise HTTPException(409, "该账号仍有处理中的任务，请完成后再备份")
         chat_rows = db.execute(
@@ -738,14 +747,20 @@ def backup(user_id: str, user=Depends(admin)):
                 "lessons": [dict(r) for r in rows],
                 "messages": [dict(r) for r in chat_rows],
                 "chat_turns": [dict(r) for r in chat_turns],
+                "shared_videos": [dict(r) for r in shared_videos],
             }
             z.writestr(
                 "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
             )
             folder = config.DATA / "users" / user_id
             for p in folder.rglob("*") if folder.exists() else []:
+                if p.relative_to(folder).parts[0] == "shared-videos":
+                    continue
                 if p.is_file() and not p.is_symlink():
                     z.write(p, "files/" + p.relative_to(folder).as_posix())
+            for resource in shared_videos:
+                path = library.directory(user_id, resource["id"]) / "source.video"
+                z.write(path, "files/" + path.relative_to(folder).as_posix())
         archive.seek(0)
     except BaseException:
         archive.close()
@@ -778,6 +793,8 @@ def audit_log(user=Depends(admin)):
             ).fetchall()
         ]
 
+
+app.include_router(library.router_for(current_user))
 
 # Serve a fully local production bundle. API misses must never return the SPA.
 dist = config.ROOT / "frontend" / "dist"

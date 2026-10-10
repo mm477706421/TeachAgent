@@ -76,6 +76,11 @@ def test_missing_model_short_clip_extracts_frame_and_supports_range_playback(
     media = c["alice"].get(f"/api/lessons/{lid}/media", headers={"Range": "bytes=0-99"})
     assert media.status_code == 206 and len(media.content) == 100
     assert media.content == short_video.read_bytes()[:100]
+    downloaded = c["alice"].get(f"/api/lessons/{lid}/media?download=true")
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-disposition"].startswith("attachment;")
+    assert downloaded.content == short_video.read_bytes()
+    assert c["bob"].get(f"/api/lessons/{lid}/media?download=true").status_code == 404
     assert c["alice"].get(f"/api/lessons/{lid}/report").status_code == 409
     assert c["alice"].delete(f"/api/lessons/{lid}").status_code == 200
     assert not pipeline.lesson_dir(ids["alice"], lid).exists()

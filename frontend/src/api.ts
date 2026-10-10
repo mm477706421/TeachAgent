@@ -122,14 +122,15 @@ export async function streamChat(
     reader.releaseLock();
   }
 }
-export function upload(
+export function upload<T = import("./types").Lesson>(
   form: FormData,
   progress: (percent: number) => void,
-): Promise<import("./types").Lesson> {
+  path = "/lessons/upload",
+): Promise<T> {
   requireLocalDeployment();
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/lessons/upload");
+    xhr.open("POST", "/api" + path);
     xhr.setRequestHeader("X-CSRF-Token", csrf);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) progress(Math.round((e.loaded / e.total) * 100));

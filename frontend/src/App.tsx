@@ -48,6 +48,7 @@ import {
 import { api, download, post, setCsrf, upload } from "./api";
 import type { Analysis, Lesson, System, User } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
+import VideoLibrary from "./VideoLibrary";
 import AssistantMessage from "./AssistantMessage";
 import { useChat } from "./useChat";
 import demoData from "./demo.json";
@@ -57,6 +58,7 @@ const DEMO = demoData as Lesson;
 type Page =
   | "overview"
   | "lessons"
+  | "library"
   | "analysis"
   | "reports"
   | "chat"
@@ -65,6 +67,7 @@ type Page =
 const NAV: { id: Page; label: string; icon: typeof House }[] = [
   { id: "overview", label: "工作概览", icon: House },
   { id: "lessons", label: "我的课堂", icon: VideoCamera },
+  { id: "library", label: "共享视频库", icon: FolderOpen },
   { id: "analysis", label: "教学洞察", icon: ChartBar },
   { id: "reports", label: "分析报告", icon: FileText },
   { id: "chat", label: "教研助手", icon: ChatsCircle },
@@ -1303,6 +1306,14 @@ function LessonDetail({
           </p>
         </div>
         <div className="button-row">
+          {!demo && lesson.has_video && lesson.status !== "uploading" && (
+            <a
+              className="btn secondary"
+              href={`/api/lessons/${lesson.id}/media?download=true`}
+            >
+              <DownloadSimple /> 下载视频
+            </a>
+          )}
           {a && (
             <button
               className="btn primary"
@@ -1857,6 +1868,8 @@ function Admin({ notify, user }: { notify: (s: string) => void; user: User }) {
     backup_user: "导出账号备份",
     export_report: "下载报告",
     delete_lesson: "删除课堂",
+    share_video: "上传共享视频",
+    delete_shared_video: "删除共享视频",
     password_changed: "修改密码",
     model_settings_changed: "更新模型设置",
     model_connection_test: "测试模型连接",
@@ -2503,6 +2516,8 @@ export default function App() {
               notify={notify}
               onLogout={logout}
             />
+          ) : page === "library" ? (
+            <VideoLibrary user={user} demo={demo} notify={notify} />
           ) : page === "admin" && user.role === "admin" ? (
             <Admin notify={notify} user={user} />
           ) : (
