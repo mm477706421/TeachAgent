@@ -96,6 +96,7 @@ docker compose exec teachagent python -m backend.cli create-admin
 - [1.0 验收记录](docs/验收记录.md)：历史测试结果。
 - [响应式布局验收](docs/响应式布局验收.md)：断点行为、导航交互与浏览器矩阵。
 - [版本变更](CHANGELOG.md)
+- [GitHub Actions 自动部署说明](docs/自动部署说明.md)：main 更新后自动验证并发布到服务器 8080 端口，含凭据、备份与故障恢复说明。
 
 ## 开发与验证
 

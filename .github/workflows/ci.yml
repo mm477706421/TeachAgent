@@ -42,6 +42,19 @@ jobs:
           for attempt in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/api/health && break || sleep 1; done
           cd frontend
           npm run test:e2e
+      - name: Package tested server build
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          git archive HEAD -o /tmp/teachagent-server.tar
+          tar -rf /tmp/teachagent-server.tar frontend/dist
+          mkdir -p server-artifact
+          gzip -c /tmp/teachagent-server.tar > server-artifact/teachagent-server.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          name: teachagent-server-${{ github.sha }}
+          path: server-artifact/teachagent-server.tar.gz
+          retention-days: 7
   build-pages:
     needs: test
     runs-on: ubuntu-latest
@@ -82,3 +95,31 @@ jobs:
       - name: Deploy static demo to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+  deploy-server:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [test, build-pages]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: http://43.165.169.59:8080/
+    concurrency:
+      group: teachagent-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: teachagent-server-${{ github.sha }}
+          path: server-artifact
+      - run: python -m pip install paramiko==4.0.0
+      - name: Deploy via SSH and verify port 8080
+        env:
+          DEPLOY_HOST: ${{ secrets.TEACHAGENT_SSH_HOST }}
+          DEPLOY_USER: ${{ secrets.TEACHAGENT_SSH_USER }}
+          DEPLOY_PRIVATE_KEY: ${{ secrets.TEACHAGENT_SSH_PRIVATE_KEY }}
+          DEPLOY_HOST_FINGERPRINT: ${{ secrets.TEACHAGENT_SSH_HOST_FINGERPRINT }}
+        run: python deploy/ssh_release.py

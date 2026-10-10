@@ -199,10 +199,14 @@ class Chat(BaseModel):
 
 @app.get("/api/health")
 def health():
+    revision_file = config.ROOT / "DEPLOYED_REVISION"
     return {
         "status": "ok",
         "version": app.version,
         "processing": "local-default-optional-cloud",
+        "revision": revision_file.read_text(encoding="utf-8").strip()
+        if revision_file.is_file()
+        else "development",
     }
 
 
