@@ -14,6 +14,8 @@ TABLES = (
     "model_settings",
     "model_profiles",
     "library_videos",
+    "seedance_settings",
+    "generated_videos",
 )
 
 

@@ -1,0 +1,256 @@
+.seedance-studio {
+  min-width: 0;
+}
+.seedance-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 38px;
+  color: #f8faee;
+  background: #244d3e;
+  border-radius: 24px;
+  margin-bottom: 22px;
+  overflow: hidden;
+}
+.seedance-eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #c7d9ab;
+}
+.seedance-hero h1 {
+  font-size: clamp(26px, 3vw, 40px);
+  margin: 18px 0;
+  line-height: 1.3;
+}
+.seedance-hero p {
+  color: #d6e1d7;
+  line-height: 1.8;
+}
+.seedance-pill {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  background: #ffffff12;
+  padding: 9px 13px;
+  border-radius: 24px;
+  margin-top: 16px;
+}
+.seedance-mark {
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  color: #d2e9a1;
+  font-size: 12px;
+}
+.seedance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(270px, 1fr);
+  gap: 24px;
+  margin: 24px 0 36px;
+  align-items: start;
+}
+.seedance-compose,
+.seedance-settings {
+  padding: 26px;
+  min-width: 0;
+  background: white;
+}
+.seedance-studio h2 {
+  font-size: 20px;
+}
+.seedance-studio fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.seedance-studio label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 18px 0;
+  font-size: 13px;
+}
+.seedance-studio input:not([type="checkbox"]),
+.seedance-studio textarea,
+.seedance-studio select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.seedance-studio textarea {
+  resize: vertical;
+  line-height: 1.8;
+}
+.seedance-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.seedance-studio .seedance-consent {
+  flex-direction: row;
+  align-items: flex-start;
+  line-height: 1.7;
+}
+.seedance-consent input {
+  margin-top: 4px;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+.seedance-consent span {
+  min-width: 0;
+}
+.seedance-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+.seedance-templates button {
+  border: 1px solid #dae4d4;
+  background: #f5f8ef;
+  color: #385744;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.seedance-endpoint {
+  margin-top: 24px;
+  font-size: 11px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  color: #66775f;
+}
+.seedance-settings > a {
+  font-size: 12px;
+  color: #287a63;
+}
+.seedance-demo-note {
+  background: #f5f8ef;
+  padding: 20px;
+  border-radius: 14px;
+  margin-top: 20px;
+  line-height: 1.8;
+}
+.seedance-collection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+.seedance-search {
+  display: flex;
+  gap: 8px;
+  max-width: 360px;
+  min-width: 0;
+}
+.seedance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.seedance-card {
+  min-width: 0;
+  overflow: hidden;
+  background: white;
+}
+.seedance-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  gap: 12px;
+  color: #476943;
+  background: #edf2e5;
+}
+.seedance-state {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: white;
+}
+.seedance-state.done {
+  color: #246346;
+  background: #d8efdf;
+}
+.seedance-card-body {
+  padding: 22px;
+  overflow-wrap: anywhere;
+}
+.seedance-card-body h3 {
+  margin-top: 0;
+  line-height: 1.5;
+}
+.seedance-card-body details {
+  font-size: 11px;
+  color: #66775f;
+  margin: 12px 0;
+}
+.seedance-prompt {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #66775f;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.seedance-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 18px;
+}
+.seedance-actions .btn {
+  padding: 10px 14px;
+  font-size: 12px;
+}
+.seedance-edit {
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.seedance-edit button {
+  margin: 8px 10px 0 0;
+}
+@media (max-width: 1250px) {
+  .seedance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .seedance-mark {
+    display: none;
+  }
+}
+@media (max-width: 960px) {
+  .seedance-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .seedance-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .seedance-hero {
+    padding: 24px;
+  }
+  .seedance-compose,
+  .seedance-settings {
+    padding: 20px;
+  }
+  .seedance-collection-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .seedance-search {
+    max-width: none;
+  }
+  .seedance-options {
+    gap: 10px;
+  }
+}

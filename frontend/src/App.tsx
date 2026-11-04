@@ -49,6 +49,7 @@ import { api, download, post, setCsrf, upload } from "./api";
 import type { Analysis, Lesson, System, User } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
 import VideoLibrary from "./VideoLibrary";
+import SeedanceStudio from "./SeedanceStudio";
 import AssistantMessage from "./AssistantMessage";
 import { useChat } from "./useChat";
 import demoData from "./demo.json";
@@ -59,6 +60,7 @@ type Page =
   | "overview"
   | "lessons"
   | "library"
+  | "seedance"
   | "analysis"
   | "reports"
   | "chat"
@@ -68,6 +70,7 @@ const NAV: { id: Page; label: string; icon: typeof House }[] = [
   { id: "overview", label: "工作概览", icon: House },
   { id: "lessons", label: "我的课堂", icon: VideoCamera },
   { id: "library", label: "共享视频库", icon: FolderOpen },
+  { id: "seedance", label: "教学视频生成", icon: Sparkle },
   { id: "analysis", label: "教学洞察", icon: ChartBar },
   { id: "reports", label: "分析报告", icon: FileText },
   { id: "chat", label: "教研助手", icon: ChatsCircle },
@@ -2516,6 +2519,8 @@ export default function App() {
               notify={notify}
               onLogout={logout}
             />
+          ) : page === "seedance" ? (
+            <SeedanceStudio demo={demo} notify={notify} />
           ) : page === "library" ? (
             <VideoLibrary user={user} demo={demo} notify={notify} />
           ) : page === "admin" && user.role === "admin" ? (

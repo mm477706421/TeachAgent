@@ -37,7 +37,7 @@ from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
 from .reports import html_report, markdown, word_report
-from . import model_service, chat_service, iflytek_asr, library
+from . import model_service, chat_service, iflytek_asr, library, seedance
 from .model_service import ModelError, ModelSettingsInput
 
 
@@ -52,12 +52,13 @@ async def lifespan(app):
             "UPDATE chat_turns SET status='interrupted',error='服务重启，回答未完成，请重试。' WHERE status IN ('running','stopping')"
         )
         db.execute("DELETE FROM sessions WHERE expires<?", (time.time(),))
-    yield
+    async with seedance.lifecycle():
+        yield
 
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.4.0",
+    version="1.5.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -72,7 +73,7 @@ async def model_error_handler(request: Request, exc: ModelError):
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     # Pydantic's default input echo may disclose a submitted API key.
-    if request.url.path.startswith("/api/model-settings"):
+    if request.url.path.startswith(("/api/model-settings", "/api/seedance")):
         return JSONResponse(
             status_code=422,
             content={"detail": "模型设置格式无效，请检查字段、密钥格式与数值范围。"},
@@ -726,6 +727,12 @@ def backup(user_id: str, user=Depends(admin)):
         shared_videos = db.execute(
             "SELECT * FROM library_videos WHERE user_id=?", (user_id,)
         ).fetchall()
+        generated_videos = db.execute(
+            "SELECT " + seedance.PUBLIC + " FROM generated_videos WHERE user_id=?",
+            (user_id,),
+        ).fetchall()
+        if any(r["status"] in seedance.ACTIVE for r in generated_videos):
+            raise HTTPException(409, "该账号仍有视频正在生成或下载，请完成后再备份")
         if any(r["status"] in {"queued", "processing", "uploading"} for r in rows):
             raise HTTPException(409, "该账号仍有处理中的任务，请完成后再备份")
         chat_rows = db.execute(
@@ -752,6 +759,7 @@ def backup(user_id: str, user=Depends(admin)):
                 "messages": [dict(r) for r in chat_rows],
                 "chat_turns": [dict(r) for r in chat_turns],
                 "shared_videos": [dict(r) for r in shared_videos],
+                "generated_videos": [dict(r) for r in generated_videos],
             }
             z.writestr(
                 "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
@@ -799,6 +807,7 @@ def audit_log(user=Depends(admin)):
 
 
 app.include_router(library.router_for(current_user))
+app.include_router(seedance.router_for(current_user))
 
 # Serve a fully local production bundle. API misses must never return the SPA.
 dist = config.ROOT / "frontend" / "dist"

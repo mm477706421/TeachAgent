@@ -62,6 +62,16 @@ def init_db():
           title TEXT NOT NULL, subject TEXT NOT NULL, description TEXT NOT NULL,
           filename TEXT NOT NULL, size INTEGER NOT NULL, duration REAL NOT NULL,
           created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS seedance_settings (
+          user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          model TEXT NOT NULL, api_key TEXT NOT NULL, updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS generated_videos (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+          title TEXT NOT NULL, prompt TEXT NOT NULL, model TEXT NOT NULL,
+          ratio TEXT NOT NULL, duration INTEGER NOT NULL, status TEXT NOT NULL,
+          remote_id TEXT, api_key TEXT NOT NULL, error TEXT NOT NULL DEFAULT '',
+          size INTEGER NOT NULL DEFAULT 0, created REAL NOT NULL, updated REAL NOT NULL);
+        CREATE INDEX IF NOT EXISTS generated_owner ON generated_videos(user_id,created);
         CREATE INDEX IF NOT EXISTS library_owner ON library_videos(user_id, created);
         CREATE TABLE IF NOT EXISTS chat_turns (
           id TEXT PRIMARY KEY, lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,

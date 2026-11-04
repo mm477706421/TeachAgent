@@ -108,6 +108,8 @@ import sqlite3,sys
 with sqlite3.connect(sys.argv[1]) as db:
     busy=db.execute("SELECT COUNT(*) FROM lessons WHERE status IN ('uploading','queued','processing')").fetchone()[0]
     busy+=db.execute("SELECT COUNT(*) FROM chat_turns WHERE status IN ('running','stopping')").fetchone()[0]
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='generated_videos'").fetchone():
+        busy+=db.execute("SELECT COUNT(*) FROM generated_videos WHERE status IN ('submitting','queued','running','downloading')").fetchone()[0]
 raise SystemExit(1 if busy else 0)
 PY
   then drained=1; break; fi
