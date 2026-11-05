@@ -7,6 +7,7 @@ import {
   ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { api, post } from "./api";
+import LocalVideoSettings from "./LocalVideoSettings";
 
 type Video = {
   id: string;
@@ -87,6 +88,10 @@ export default function SeedanceStudio({
       "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
   });
   const [key, setKey] = useState("");
+  const [compute, setCompute] = useState("seedance");
+  const [localReady, setLocalReady] = useState(false);
+  const [storySubject, setStorySubject] = useState("历史");
+  const [course, setCourse] = useState("");
   const [clearKey, setClearKey] = useState(false);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -197,14 +202,17 @@ export default function SeedanceStudio({
             ).toString(16),
           );
     try {
-      const result = await post<Video>("/seedance/videos", {
-        request_id: requestId.current,
-        title,
-        prompt,
-        ratio,
-        duration,
-        allow_external: consent,
-      });
+      const result = await post<Video>(
+        compute === "comfyui" ? "/local-video/videos" : "/seedance/videos",
+        {
+          request_id: requestId.current,
+          title,
+          prompt,
+          ratio,
+          duration,
+          allow_external: consent,
+        },
+      );
       requestId.current = "";
       setConsent(false);
       setOffset(0);
@@ -256,13 +264,51 @@ export default function SeedanceStudio({
         </div>
       </header>
       <div className="notice">
-        Seedance
-        为外部付费服务，仅发送你填写的提示词，不会自动发送课堂视频或分析记录。生成结果仅本人可见，本地保存后可下载；管理员可按账号备份。
+        由老师选择个人 Seedance API 额度或自己的本地 ComfyUI
+        算力。只发送本页填写的描述，不自动发送课堂记录。文科生成故事片段；需要参数同步的理科演示请使用“理科动态模型”。
         {demo && " 当前为静态演示，不收集 API Key，不生成或下载真实视频。"}
       </div>
       <div className="seedance-layout">
         <section className="panel seedance-compose" aria-label="教学视频生成">
           <h2>描述你的教学画面</h2>
+          <details className="story-builder">
+            <summary>从历史 / 语文 / 政治课程编排故事</summary>
+            <label>
+              故事学科
+              <select
+                value={storySubject}
+                onChange={(e) => setStorySubject(e.target.value)}
+              >
+                <option>历史</option>
+                <option>语文</option>
+                <option>政治</option>
+              </select>
+            </label>
+            <label>
+              课程内容与故事依据
+              <textarea
+                rows={4}
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+                maxLength={2500}
+                placeholder="粘贴教材节选、史实或要解释的概念，不填写学生个人信息"
+              />
+            </label>
+            <button
+              type="button"
+              className="btn secondary"
+              disabled={course.trim().length < 5 || busy}
+              onClick={() => {
+                setTitle(`${storySubject}课堂故事`);
+                setPrompt(
+                  `制作一段${duration}秒的${storySubject}课堂故事片段。只依据下列课程材料，不补编史实、引文或人物言论。采用开场情境—关键行动—课堂提问的三拍结构，选择一个小情节，画面自然、人物连贯；文字旁白请留给教师后期审核。${storySubject === "政治" ? "用虚构日常情境解释教材概念，不针对现实人群开展说服。" : ""}\n课程依据：${course.trim()}\n镜头建议：前段建立场景，中段表现事件，末段停留在可讨论的画面。`,
+                );
+                notify("已编排故事提示词，请核对事实与画面后提交生成。");
+              }}
+            >
+              编排故事提示词
+            </button>
+          </details>
           <p className="subtle">
             先选一个灵感，再写清知识点、画面内容与镜头变化。
           </p>
@@ -297,6 +343,7 @@ export default function SeedanceStudio({
                 画面描述
                 <textarea
                   rows={6}
+                  aria-label="画面描述"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   required
@@ -340,7 +387,9 @@ export default function SeedanceStudio({
                     required
                   />
                   <span>
-                    我同意将提示词发送至 Seedance，并确认本次生成可能产生费用。
+                    {compute === "comfyui"
+                      ? "我同意将描述发送至自己配置的本地算力服务，并使用其计算资源。"
+                      : "我同意将提示词发送至 Seedance，并确认本次生成可能产生费用。"}
                   </span>
                 </label>
               )}
@@ -348,7 +397,10 @@ export default function SeedanceStudio({
                 className="btn primary"
                 disabled={
                   busy ||
-                  (!demo && (!settings.api_key_configured || !settings.model))
+                  (!demo &&
+                    (compute === "comfyui"
+                      ? !localReady
+                      : !settings.api_key_configured || !settings.model))
                 }
               >
                 <Sparkle size={18} />
@@ -358,79 +410,107 @@ export default function SeedanceStudio({
           </form>
         </section>
         <aside className="panel seedance-settings">
-          <h2>连接 Seedance</h2>
-          <p className="subtle">火山方舟 · 北京地域</p>
-          {demo ? (
-            <div className="seedance-demo-note">
-              <FilmStrip size={32} />
-              <h3>在学校工作台连接模型</h3>
-              <p>
-                使用自己的方舟 API Key 和已开通的 Seedance 模型
-                ID。此演示不会接收密钥。
-              </p>
-            </div>
+          <label>
+            视频生成算力
+            <select
+              value={compute}
+              disabled={busy}
+              onChange={(e) => {
+                setCompute(e.target.value);
+                setConsent(false);
+                requestId.current = "";
+              }}
+            >
+              <option value="seedance">个人 API · Seedance</option>
+              <option value="comfyui">本地 GPU · ComfyUI</option>
+            </select>
+          </label>
+          {compute === "comfyui" ? (
+            <>
+              <h2>连接自己的本地算力</h2>
+              <LocalVideoSettings
+                demo={demo}
+                notify={notify}
+                onReady={setLocalReady}
+              />
+            </>
           ) : (
-            <form onSubmit={save}>
-              <fieldset disabled={busy}>
-                <label>
-                  Seedance 模型 ID
-                  <input
-                    value={settings.model}
-                    onChange={(e) =>
-                      setSettings({ ...settings, model: e.target.value })
-                    }
-                    maxLength={160}
-                    pattern="[a-zA-Z0-9._-]*"
-                    placeholder="模型 ID 或 ep- 开头的推理接入点"
-                  />
-                </label>
-                <label>
-                  Seedance API Key
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    value={key}
-                    onChange={(e) => setKey(e.target.value)}
-                    disabled={clearKey}
-                    placeholder={
-                      settings.api_key_configured
-                        ? "已配置，留空保留原密钥"
-                        : "填写方舟 API Key"
-                    }
-                  />
-                </label>
-                <p className="subtle">
-                  {settings.api_key_configured
-                    ? "密钥已加密保存"
-                    : "尚未配置密钥"}{" "}
-                  · 每个账号独立设置
-                </p>
-                <label className="seedance-consent">
-                  <input
-                    type="checkbox"
-                    checked={clearKey}
-                    onChange={(e) => setClearKey(e.target.checked)}
-                  />
-                  <span>清除已保存的密钥（不影响已提交任务）</span>
-                </label>
-                <button className="btn secondary" disabled={busy}>
-                  保存 Seedance 设置
-                </button>
-              </fieldset>
-            </form>
+            <>
+              <h2>连接 Seedance</h2>
+              <p className="subtle">火山方舟 · 北京地域</p>
+              {demo ? (
+                <div className="seedance-demo-note">
+                  <FilmStrip size={32} />
+                  <h3>在学校工作台连接模型</h3>
+                  <p>
+                    使用自己的方舟 API Key 和已开通的 Seedance 模型
+                    ID。此演示不会接收密钥。
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={save}>
+                  <fieldset disabled={busy}>
+                    <label>
+                      Seedance 模型 ID
+                      <input
+                        value={settings.model}
+                        onChange={(e) =>
+                          setSettings({ ...settings, model: e.target.value })
+                        }
+                        maxLength={160}
+                        pattern="[a-zA-Z0-9._-]*"
+                        placeholder="模型 ID 或 ep- 开头的推理接入点"
+                      />
+                    </label>
+                    <label>
+                      Seedance API Key
+                      <input
+                        type="password"
+                        autoComplete="new-password"
+                        value={key}
+                        onChange={(e) => setKey(e.target.value)}
+                        disabled={clearKey}
+                        placeholder={
+                          settings.api_key_configured
+                            ? "已配置，留空保留原密钥"
+                            : "填写方舟 API Key"
+                        }
+                      />
+                    </label>
+                    <p className="subtle">
+                      {settings.api_key_configured
+                        ? "密钥已加密保存"
+                        : "尚未配置密钥"}{" "}
+                      · 每个账号独立设置
+                    </p>
+                    <label className="seedance-consent">
+                      <input
+                        type="checkbox"
+                        checked={clearKey}
+                        onChange={(e) => setClearKey(e.target.checked)}
+                      />
+                      <span>清除已保存的密钥（不影响已提交任务）</span>
+                    </label>
+                    <button className="btn secondary" disabled={busy}>
+                      保存 Seedance 设置
+                    </button>
+                  </fieldset>
+                </form>
+              )}
+              <p className="seedance-endpoint">
+                官方接口
+                <br />
+                {settings.endpoint}
+              </p>
+              <a
+                href="https://www.volcengine.com/docs/82379/1520757"
+                target="_blank"
+                rel="noreferrer"
+              >
+                查看方舟视频生成 API 文档 ↗
+              </a>
+            </>
           )}
-          <p className="seedance-endpoint">
-            官方接口
-            <br />
-            {settings.endpoint}
-          </p>
-          <a
-            href="https://www.volcengine.com/docs/82379/1520757"
-            target="_blank"
-            rel="noreferrer"
-          >
-            查看方舟视频生成 API 文档 ↗
-          </a>
         </aside>
       </div>
       <section className="seedance-collection" aria-label="我的生成视频">

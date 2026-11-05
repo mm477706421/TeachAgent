@@ -37,7 +37,16 @@ from .analysis import analyze, grounded_reply, parse_transcript
 from .db import audit, connect, init_db, password_hash, password_valid
 from .pipeline import lesson_dir, submit
 from .reports import html_report, markdown, word_report
-from . import model_service, chat_service, iflytek_asr, library, seedance
+from . import (
+    model_service,
+    chat_service,
+    iflytek_asr,
+    library,
+    seedance,
+    local_video,
+    video_downloads,
+    simulations,
+)
 from .model_service import ModelError, ModelSettingsInput
 
 
@@ -52,13 +61,13 @@ async def lifespan(app):
             "UPDATE chat_turns SET status='interrupted',error='服务重启，回答未完成，请重试。' WHERE status IN ('running','stopping')"
         )
         db.execute("DELETE FROM sessions WHERE expires<?", (time.time(),))
-    async with seedance.lifecycle():
+    async with seedance.lifecycle(), video_downloads.lifecycle():
         yield
 
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.5.0",
+    version="1.6.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -73,7 +82,14 @@ async def model_error_handler(request: Request, exc: ModelError):
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     # Pydantic's default input echo may disclose a submitted API key.
-    if request.url.path.startswith(("/api/model-settings", "/api/seedance")):
+    if request.url.path.startswith(
+        (
+            "/api/model-settings",
+            "/api/seedance",
+            "/api/local-video",
+            "/api/video-downloads",
+        )
+    ):
         return JSONResponse(
             status_code=422,
             content={"detail": "模型设置格式无效，请检查字段、密钥格式与数值范围。"},
@@ -733,6 +749,17 @@ def backup(user_id: str, user=Depends(admin)):
         ).fetchall()
         if any(r["status"] in seedance.ACTIVE for r in generated_videos):
             raise HTTPException(409, "该账号仍有视频正在生成或下载，请完成后再备份")
+        downloads = db.execute(
+            "SELECT "
+            + video_downloads.PUBLIC
+            + " FROM video_downloads WHERE user_id=?",
+            (user_id,),
+        ).fetchall()
+        if any(r["status"] in {"queued", "downloading"} for r in downloads):
+            raise HTTPException(409, "该账号仍有网址下载任务，请完成后再备份")
+        simulation_rows = db.execute(
+            "SELECT * FROM simulations WHERE user_id=?", (user_id,)
+        ).fetchall()
         if any(r["status"] in {"queued", "processing", "uploading"} for r in rows):
             raise HTTPException(409, "该账号仍有处理中的任务，请完成后再备份")
         chat_rows = db.execute(
@@ -760,6 +787,8 @@ def backup(user_id: str, user=Depends(admin)):
                 "chat_turns": [dict(r) for r in chat_turns],
                 "shared_videos": [dict(r) for r in shared_videos],
                 "generated_videos": [dict(r) for r in generated_videos],
+                "video_downloads": [dict(r) for r in downloads],
+                "simulations": [dict(r) for r in simulation_rows],
             }
             z.writestr(
                 "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
@@ -808,6 +837,9 @@ def audit_log(user=Depends(admin)):
 
 app.include_router(library.router_for(current_user))
 app.include_router(seedance.router_for(current_user))
+app.include_router(local_video.router_for(current_user))
+app.include_router(video_downloads.router_for(current_user))
+app.include_router(simulations.router_for(current_user))
 
 # Serve a fully local production bundle. API misses must never return the SPA.
 dist = config.ROOT / "frontend" / "dist"

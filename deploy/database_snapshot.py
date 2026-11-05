@@ -16,6 +16,9 @@ TABLES = (
     "library_videos",
     "seedance_settings",
     "generated_videos",
+    "local_video_settings",
+    "video_downloads",
+    "simulations",
 )
 
 

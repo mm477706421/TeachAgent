@@ -1,0 +1,182 @@
+[
+  {
+    "id": "pendulum",
+    "name": "单摆",
+    "keywords": ["单摆", "摆长", "摆动"],
+    "formula": "θ(t)=θ₀cos(√(g/L)t)；T=2π√(L/g)",
+    "assumption": "小角度（不超过 15°）、无阻力、质点摆球；参数为 SI 单位。",
+    "params": [
+      {
+        "key": "length",
+        "label": "摆长",
+        "unit": "m",
+        "min": 0.2,
+        "max": 5,
+        "step": 0.1,
+        "value": 1
+      },
+      {
+        "key": "angle",
+        "label": "初始角度",
+        "unit": "°",
+        "min": 1,
+        "max": 15,
+        "step": 1,
+        "value": 10
+      },
+      {
+        "key": "gravity",
+        "label": "重力加速度",
+        "unit": "m/s²",
+        "min": 1,
+        "max": 20,
+        "step": 0.1,
+        "value": 9.8
+      }
+    ]
+  },
+  {
+    "id": "projectile",
+    "name": "平抛运动",
+    "keywords": ["平抛", "抛体", "抛物线"],
+    "formula": "x=v₀t；y=h−gt²/2；vᵧ=−gt",
+    "assumption": "水平抛出、忽略空气阻力；落地即停止，时间不会继续产生地下轨迹。",
+    "params": [
+      {
+        "key": "height",
+        "label": "初始高度",
+        "unit": "m",
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "value": 20
+      },
+      {
+        "key": "speed",
+        "label": "水平初速度",
+        "unit": "m/s",
+        "min": 1,
+        "max": 30,
+        "step": 1,
+        "value": 10
+      },
+      {
+        "key": "gravity",
+        "label": "重力加速度",
+        "unit": "m/s²",
+        "min": 1,
+        "max": 20,
+        "step": 0.1,
+        "value": 9.8
+      }
+    ]
+  },
+  {
+    "id": "spring",
+    "name": "弹簧振子",
+    "keywords": ["弹簧", "简谐", "振子", "胡克"],
+    "formula": "x=Acos(√(k/m)t)；v=−A√(k/m)sin(√(k/m)t)；E=kA²/2",
+    "assumption": "理想线性弹簧、无摩擦，位移相对平衡位置。",
+    "params": [
+      {
+        "key": "mass",
+        "label": "质量",
+        "unit": "kg",
+        "min": 0.1,
+        "max": 10,
+        "step": 0.1,
+        "value": 1
+      },
+      {
+        "key": "stiffness",
+        "label": "劲度系数",
+        "unit": "N/m",
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "value": 10
+      },
+      {
+        "key": "amplitude",
+        "label": "振幅",
+        "unit": "m",
+        "min": 0.05,
+        "max": 1,
+        "step": 0.05,
+        "value": 0.3
+      }
+    ]
+  },
+  {
+    "id": "wave",
+    "name": "正弦行波",
+    "keywords": ["波动", "波长", "行波", "正弦波", "波速"],
+    "formula": "y(x,t)=Asin(2π(x/λ−ft))；波速 v=λf",
+    "assumption": "沿 x 正向传播的一维理想波；标记点固定在 x=1m，显示该处介质位移。",
+    "params": [
+      {
+        "key": "amplitude",
+        "label": "振幅",
+        "unit": "m",
+        "min": 0.05,
+        "max": 1,
+        "step": 0.05,
+        "value": 0.3
+      },
+      {
+        "key": "wavelength",
+        "label": "波长",
+        "unit": "m",
+        "min": 0.2,
+        "max": 5,
+        "step": 0.1,
+        "value": 2
+      },
+      {
+        "key": "frequency",
+        "label": "频率",
+        "unit": "Hz",
+        "min": 0.1,
+        "max": 3,
+        "step": 0.1,
+        "value": 0.5
+      }
+    ]
+  },
+  {
+    "id": "rc",
+    "name": "RC 充电电路",
+    "keywords": ["电容", "RC", "充电电路", "时间常数"],
+    "formula": "U꜀=U(1−e⁻ᵗ/ᴿᶜ)；I=(U/R)e⁻ᵗ/ᴿᶜ；Q=CU꜀",
+    "assumption": "理想直流电源、串联电阻电容、初始电容电压为零。图中流动标记仅示意电流，不代表电子速度。",
+    "params": [
+      {
+        "key": "voltage",
+        "label": "电源电压",
+        "unit": "V",
+        "min": 1,
+        "max": 24,
+        "step": 1,
+        "value": 6
+      },
+      {
+        "key": "resistance",
+        "label": "电阻",
+        "unit": "kΩ",
+        "min": 0.5,
+        "max": 20,
+        "step": 0.5,
+        "value": 2
+      },
+      {
+        "key": "capacitance",
+        "label": "电容",
+        "unit": "μF",
+        "min": 100,
+        "max": 5000,
+        "step": 100,
+        "value": 1000
+      }
+    ]
+  }
+]

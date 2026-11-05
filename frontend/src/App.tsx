@@ -50,6 +50,8 @@ import type { Analysis, Lesson, System, User } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
 import VideoLibrary from "./VideoLibrary";
 import SeedanceStudio from "./SeedanceStudio";
+import ScienceStudio from "./ScienceStudio";
+import VideoDownloads from "./VideoDownloads";
 import AssistantMessage from "./AssistantMessage";
 import { useChat } from "./useChat";
 import demoData from "./demo.json";
@@ -61,6 +63,8 @@ type Page =
   | "lessons"
   | "library"
   | "seedance"
+  | "science"
+  | "downloads"
   | "analysis"
   | "reports"
   | "chat"
@@ -71,6 +75,8 @@ const NAV: { id: Page; label: string; icon: typeof House }[] = [
   { id: "lessons", label: "我的课堂", icon: VideoCamera },
   { id: "library", label: "共享视频库", icon: FolderOpen },
   { id: "seedance", label: "教学视频生成", icon: Sparkle },
+  { id: "science", label: "理科动态模型", icon: ChartLineUp },
+  { id: "downloads", label: "网址视频下载", icon: DownloadSimple },
   { id: "analysis", label: "教学洞察", icon: ChartBar },
   { id: "reports", label: "分析报告", icon: FileText },
   { id: "chat", label: "教研助手", icon: ChatsCircle },
@@ -2519,6 +2525,10 @@ export default function App() {
               notify={notify}
               onLogout={logout}
             />
+          ) : page === "science" ? (
+            <ScienceStudio demo={demo} notify={notify} />
+          ) : page === "downloads" ? (
+            <VideoDownloads demo={demo} notify={notify} />
           ) : page === "seedance" ? (
             <SeedanceStudio demo={demo} notify={notify} />
           ) : page === "library" ? (

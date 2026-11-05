@@ -25,7 +25,7 @@ from .model_service import _cipher
 
 ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks"
 ACTIVE = {"submitting", "queued", "running", "downloading"}
-PUBLIC = "id,user_id,title,prompt,model,ratio,duration,status,remote_id,error,size,created,updated"
+PUBLIC = "id,user_id,title,prompt,model,ratio,duration,status,remote_id,error,size,created,updated,provider"
 MAX_VIDEO_BYTES = 512 * 1024 * 1024
 
 
@@ -182,8 +182,15 @@ async def download_media(url, destination):
 
 
 async def refresh_task(row):
+    from . import local_video
+
+    local = row.get("provider") == "comfyui"
     try:
-        data = await provider("GET", row["api_key"], row["remote_id"])
+        data = (
+            await local_video.poll(row)
+            if local
+            else await provider("GET", row["api_key"], row["remote_id"])
+        )
         status = data.get("status")
         if status in ("queued", "running"):
             update(row["id"], status=status, error="")
@@ -191,7 +198,13 @@ async def refresh_task(row):
             update(row["id"], status="downloading", error="")
             try:
                 size = await asyncio.wait_for(
-                    download_media(
+                    local_video.download(
+                        row,
+                        data["content"]["local_media"],
+                        folder(row["user_id"], row["id"]) / "video.mp4",
+                    )
+                    if local
+                    else download_media(
                         data["content"]["video_url"],
                         folder(row["user_id"], row["id"]) / "video.mp4",
                     ),
@@ -222,7 +235,11 @@ async def refresh_task(row):
         update(
             row["id"],
             **({"status": "attention"} if pause else {}),
-            error=provider_error(exc)
+            error=(
+                "本地算力服务暂时无法访问，请检查 ComfyUI 地址、认证和工作流输出。"
+                if local
+                else provider_error(exc)
+            )
             + (" 自动查询已暂停；修正设置后可重新查询原任务。" if pause else ""),
         )
 
@@ -396,16 +413,19 @@ def router_for(current_user):
         with connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
-                "SELECT status FROM generated_videos WHERE id=? AND user_id=?",
+                "SELECT * FROM generated_videos WHERE id=? AND user_id=?",
                 (video_id, user["id"]),
             ).fetchone()
-            if row and row[0] == "attention":
+            if row and row["status"] == "attention":
+                local = row["provider"] == "comfyui"
                 setting = db.execute(
-                    "SELECT api_key FROM seedance_settings WHERE user_id=?",
-                    (user["id"],),
+                    "SELECT api_key FROM local_video_settings WHERE user_id=? AND base_url=?"
+                    if local
+                    else "SELECT api_key FROM seedance_settings WHERE user_id=?",
+                    (user["id"], row["base_url"]) if local else (user["id"],),
                 ).fetchone()
-                if not setting or not setting[0]:
-                    raise HTTPException(400, "请先保存有效的 Seedance API Key")
+                if not setting or (not local and not setting[0]):
+                    raise HTTPException(400, "请先配置该任务原服务地址的有效凭据")
                 db.execute(
                     "UPDATE generated_videos SET api_key=? WHERE id=?",
                     (setting[0], video_id),

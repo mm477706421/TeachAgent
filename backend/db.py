@@ -72,6 +72,17 @@ def init_db():
           remote_id TEXT, api_key TEXT NOT NULL, error TEXT NOT NULL DEFAULT '',
           size INTEGER NOT NULL DEFAULT 0, created REAL NOT NULL, updated REAL NOT NULL);
         CREATE INDEX IF NOT EXISTS generated_owner ON generated_videos(user_id,created);
+        CREATE TABLE IF NOT EXISTS local_video_settings (
+          user_id TEXT PRIMARY KEY REFERENCES users(id), base_url TEXT NOT NULL,
+          workflow TEXT NOT NULL, api_key TEXT NOT NULL, updated REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS video_downloads (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+          title TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL,
+          size INTEGER NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', created REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS simulations (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+          title TEXT NOT NULL, description TEXT NOT NULL, spec TEXT NOT NULL,
+          created REAL NOT NULL);
         CREATE INDEX IF NOT EXISTS library_owner ON library_videos(user_id, created);
         CREATE TABLE IF NOT EXISTS chat_turns (
           id TEXT PRIMARY KEY, lesson_id TEXT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -81,6 +92,17 @@ def init_db():
           WHERE status IN ('running','stopping');
         """)
         columns = {row[1] for row in db.execute("PRAGMA table_info(lessons)")}
+        video_columns = {
+            row[1] for row in db.execute("PRAGMA table_info(generated_videos)")
+        }
+        if "provider" not in video_columns:
+            db.execute(
+                "ALTER TABLE generated_videos ADD COLUMN provider TEXT NOT NULL DEFAULT 'seedance'"
+            )
+        if "base_url" not in video_columns:
+            db.execute(
+                "ALTER TABLE generated_videos ADD COLUMN base_url TEXT NOT NULL DEFAULT ''"
+            )
         if "asr_provider" not in columns:
             db.execute(
                 "ALTER TABLE lessons ADD COLUMN asr_provider TEXT NOT NULL DEFAULT 'local'"
