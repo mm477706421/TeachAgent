@@ -4,76 +4,87 @@
     "name": "DeepSeek",
     "base_url": "https://api.deepseek.com/v1",
     "model": "deepseek-chat",
-    "description": "通用教学分析 · DeepSeek V3"
+    "description": "通用教学分析 · DeepSeek V3",
+    "apply_url": "https://platform.deepseek.com/api_keys"
   },
   {
     "id": "openai",
     "name": "OpenAI",
     "base_url": "https://api.openai.com/v1",
     "model": "gpt-4.1-mini",
-    "description": "GPT-4.1 mini"
+    "description": "GPT-4.1 mini",
+    "apply_url": "https://platform.openai.com/api-keys"
   },
   {
     "id": "qwen",
     "name": "通义千问 · 中国内地",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "model": "qwen-plus",
-    "description": "阿里云百炼 · Qwen Plus"
+    "description": "阿里云百炼 · Qwen Plus",
+    "apply_url": "https://bailian.console.aliyun.com/"
   },
   {
     "id": "moonshot",
     "name": "Moonshot / Kimi",
     "base_url": "https://api.moonshot.cn/v1",
     "model": "moonshot-v1-8k",
-    "description": "Moonshot V1 · 8K"
+    "description": "Moonshot V1 · 8K",
+    "apply_url": "https://platform.kimi.com/console/api-keys"
   },
   {
     "id": "zhipu",
     "name": "智谱 GLM",
     "base_url": "https://open.bigmodel.cn/api/paas/v4",
     "model": "glm-4-flash",
-    "description": "GLM-4 Flash"
+    "description": "GLM-4 Flash",
+    "apply_url": "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys"
   },
   {
     "id": "siliconflow",
     "name": "硅基流动",
     "base_url": "https://api.siliconflow.cn/v1",
     "model": "Qwen/Qwen2.5-7B-Instruct",
-    "description": "Qwen2.5 7B Instruct"
+    "description": "Qwen2.5 7B Instruct",
+    "apply_url": "https://cloud.siliconflow.cn/account/ak"
   },
   {
     "id": "openrouter",
     "name": "OpenRouter",
     "base_url": "https://openrouter.ai/api/v1",
     "model": "openai/gpt-4.1-mini",
-    "description": "模型聚合 · GPT-4.1 mini"
+    "description": "模型聚合 · GPT-4.1 mini",
+    "apply_url": "https://openrouter.ai/settings/keys"
   },
   {
     "id": "fireworks",
     "name": "Fireworks AI",
     "base_url": "https://api.fireworks.ai/inference/v1",
     "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
-    "description": "Llama 3.3 70B Instruct"
+    "description": "Llama 3.3 70B Instruct",
+    "apply_url": "https://app.fireworks.ai/settings/users/api-keys"
   },
   {
     "id": "xai",
     "name": "xAI",
     "base_url": "https://api.x.ai/v1",
     "model": "grok-4-1-fast-non-reasoning",
-    "description": "Grok 4.1 Fast"
+    "description": "Grok 4.1 Fast",
+    "apply_url": "https://console.x.ai/"
   },
   {
     "id": "minimax",
     "name": "MiniMax",
     "base_url": "https://api.minimax.io/v1",
     "model": "MiniMax-M2.5",
-    "description": "国际服务 · MiniMax M2.5"
+    "description": "国际服务 · MiniMax M2.5",
+    "apply_url": "https://platform.minimax.io/console/keys"
   },
   {
     "id": "minimax-cn",
     "name": "MiniMax (China)",
     "base_url": "https://api.minimaxi.com/v1",
     "model": "MiniMax-M2.5",
-    "description": "中国服务 · MiniMax M2.5"
+    "description": "中国服务 · MiniMax M2.5",
+    "apply_url": "https://platform.minimax.cn/console/keys"
   }
 ]

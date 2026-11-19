@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./fixtures";
 import { readFileSync } from "node:fs";
 
 const demo = JSON.parse(
@@ -39,6 +39,8 @@ async function mockChat(page: Page, content = answer) {
       };
     else if (path === "/api/lessons") body = [lesson];
     else if (path === "/api/lessons/markdown-test") body = lesson;
+    else if (path === "/api/model-settings/onboarding")
+      body = { needs_api_key: false };
     else if (path === "/api/model-settings") body = { provider: "rules" };
     else if (path === "/api/lessons/markdown-test/chat/stream") {
       const input = route.request().postDataJSON();

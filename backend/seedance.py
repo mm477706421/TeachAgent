@@ -303,6 +303,43 @@ def router_for(current_user):
         audit(user["id"], "seedance_settings", user["id"])
         return settings(user)
 
+    @router.post("/settings/verify-and-save")
+    async def verify_settings(body: Settings, user=Depends(current_user)):
+        if body.clear_api_key or not body.model.strip():
+            raise HTTPException(400, "请填写 Seedance 模型 ID 和 API Key 后测试")
+        raw = body.api_key.get_secret_value() if body.api_key else ""
+        if not raw:
+            with connect() as db:
+                row = db.execute(
+                    "SELECT api_key FROM seedance_settings WHERE user_id=?",
+                    (user["id"],),
+                ).fetchone()
+            if not row or not row[0]:
+                raise HTTPException(400, "请先填写 Seedance API Key")
+            raw = _cipher().decrypt(row[0].encode()).decode()
+        # Listing checks authorization without submitting a paid generation task.
+        try:
+            async with httpx.AsyncClient(
+                timeout=20, follow_redirects=False, trust_env=False
+            ) as client:
+                response = await client.get(
+                    ENDPOINT,
+                    params={"page_size": 1},
+                    headers={"Authorization": "Bearer " + raw},
+                )
+                response.raise_for_status()
+                data = response.json()
+                if (
+                    not isinstance(data, dict)
+                    or data.get("error")
+                    or not isinstance(data.get("items"), list)
+                ):
+                    raise TypeError("Invalid task listing")
+        except Exception as exc:  # noqa: BLE001 - never expose provider bodies or credentials
+            raise HTTPException(502, provider_error(exc)) from None
+        # Persist the exact key that passed verification, not a later edited credential.
+        return save_settings(Settings(model=body.model.strip(), api_key=raw), user)
+
     @router.get("/videos")
     def listing(
         q: str = Query("", max_length=120),

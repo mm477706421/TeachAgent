@@ -1,5 +1,5 @@
 import { responsiveSuite } from "../e2e-shared/responsive";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 responsiveSuite(false);
 

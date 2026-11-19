@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { readFile } from "node:fs/promises";
 
 test("superadmin creates administrator; teacher uses key-only presets and downloads Word", async ({
@@ -9,6 +9,14 @@ test("superadmin creates administrator; teacher uses key-only presets and downlo
     !process.env.TEACHAGENT_E2E_PASSWORD,
     "Requires local test account",
   );
+  await page.route("**/api/model-settings/verify-and-save", async (route) => {
+    // Provider fixtures are synthetic; never send these keys to real vendors.
+    const response = await route.fetch({
+      url: new URL("/api/model-settings", route.request().url()).href,
+      method: "PUT",
+    });
+    await route.fulfill({ response });
+  });
   const password = "New-admin-fixture-123";
   const username = `preset-admin-${Date.now()}`;
   await page.goto("/");

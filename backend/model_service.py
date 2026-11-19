@@ -198,6 +198,10 @@ def prepare_settings(user_id, body):
 
 def save_settings(user_id, body):
     settings, encrypted = prepare_settings(user_id, body)
+    return store_settings(user_id, settings, encrypted)
+
+
+def store_settings(user_id, settings, encrypted):
     with connect() as db:
         # Preserve independently encrypted credentials when switching providers.
         old = db.execute(
@@ -470,6 +474,17 @@ async def stream(settings, encrypted, messages):
 
 async def test_connection(user_id, body):
     settings, encrypted = prepare_settings(user_id, body)
+    return await test_prepared_settings(settings, encrypted)
+
+
+async def verify_and_save(user_id, body):
+    # Test and persist exactly the same credential snapshot, even if another tab edits settings.
+    settings, encrypted = prepare_settings(user_id, body)
+    await test_prepared_settings(settings, encrypted)
+    return store_settings(user_id, settings, encrypted)
+
+
+async def test_prepared_settings(settings, encrypted):
     started = time.monotonic()
     if settings["provider"] == "rules":
         return {

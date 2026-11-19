@@ -1,0 +1,131 @@
+.modal.api-key-setup {
+  width: min(560px, calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+}
+.modal.api-key-setup > header {
+  justify-content: flex-start;
+  margin-bottom: 14px;
+}
+.api-key-setup-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #eaf1e4;
+  color: #28503e;
+}
+.api-key-setup-description {
+  color: #5d6d60;
+  line-height: 1.7;
+  margin: 0 0 20px;
+}
+.api-key-setup fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.api-key-setup form label:not(.checkbox-label) {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 15px;
+}
+.api-key-setup input,
+.api-key-setup select {
+  min-width: 0;
+  width: 100%;
+}
+.api-key-apply {
+  padding: 14px 16px;
+  margin: 16px 0;
+  border: 1px solid #dde6d6;
+  border-radius: 14px;
+  background: #f5f8ef;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.api-key-apply p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #63745f;
+}
+.api-key-apply a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #28543e;
+  min-height: 36px;
+}
+.api-key-setup .api-key-setup-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #526251;
+}
+.api-key-setup-consent input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+}
+.api-key-security {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0;
+  font-size: 12px;
+  color: #61715c;
+}
+.api-key-save {
+  width: 100%;
+}
+.api-key-progress {
+  font-size: 12px;
+  color: #5d6d60;
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+.api-key-progress:empty {
+  display: none;
+}
+.api-key-skip {
+  display: block;
+  margin: 7px auto -5px;
+  padding: 10px 18px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  color: #687260;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.api-key-skip:hover {
+  color: #284c37;
+}
+.api-key-skip:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+@media (max-width: 480px) {
+  .modal.api-key-setup {
+    padding: 20px;
+  }
+  .api-key-setup h2 {
+    font-size: 21px;
+  }
+  .api-key-apply {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}

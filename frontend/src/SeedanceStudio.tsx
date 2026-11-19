@@ -7,6 +7,7 @@ import {
   ArrowsClockwise,
 } from "@phosphor-icons/react";
 import { api, post } from "./api";
+import { SEEDANCE_APPLY_URL } from "./ApiKeySetup";
 
 type Video = {
   id: string;
@@ -162,18 +163,25 @@ export default function SeedanceStudio({
     event.preventDefault();
     setBusy(true);
     try {
-      const result = await api<Settings>("/seedance/settings", {
-        method: "PUT",
-        body: JSON.stringify({
-          model: settings.model,
-          ...(key ? { api_key: key } : {}),
-          clear_api_key: clearKey,
-        }),
-      });
+      const result = await api<Settings>(
+        clearKey ? "/seedance/settings" : "/seedance/settings/verify-and-save",
+        {
+          method: clearKey ? "PUT" : "POST",
+          body: JSON.stringify({
+            model: settings.model,
+            ...(key ? { api_key: key } : {}),
+            clear_api_key: clearKey,
+          }),
+        },
+      );
       setSettings(result);
       setKey("");
       setClearKey(false);
-      notify("Seedance 设置已保存，密钥不会回显。");
+      notify(
+        clearKey
+          ? "Seedance 密钥已清除。"
+          : "Seedance 设置已保存，API Key 验证通过，密钥不会回显。",
+      );
     } catch (e) {
       notify(message(e));
     } finally {
@@ -401,6 +409,13 @@ export default function SeedanceStudio({
         <aside className="panel seedance-settings">
           <h2>连接 Seedance</h2>
           <p className="subtle">火山方舟 · 北京地域</p>
+          <a
+            href={SEEDANCE_APPLY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            申请 Seedance API Key ↗
+          </a>
           {demo ? (
             <div className="seedance-demo-note">
               <FilmStrip size={32} />
@@ -455,7 +470,7 @@ export default function SeedanceStudio({
                   <span>清除已保存的密钥（不影响已提交任务）</span>
                 </label>
                 <button className="btn secondary" disabled={busy}>
-                  保存 Seedance 设置
+                  {busy ? "正在验证并保存…" : "保存 Seedance 设置"}
                 </button>
               </fieldset>
             </form>

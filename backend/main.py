@@ -66,7 +66,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.6.2",
+    version="1.6.3",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -343,6 +343,27 @@ def get_model_settings(user=Depends(current_user)):
 def update_model_settings(body: ModelSettingsInput, user=Depends(current_user)):
     result = model_service.save_settings(user["id"], body)
     audit(user["id"], "model_settings_changed", body.provider)
+    return result
+
+
+@app.get("/api/model-settings/onboarding")
+def model_onboarding(user=Depends(current_user)):
+    chat = model_service.public_settings(user["id"])["api_key_configured"] or any(
+        profile["api_key_configured"]
+        for profile in model_service.public_profiles(user["id"])
+    )
+    with connect() as db:
+        row = db.execute(
+            "SELECT api_key FROM seedance_settings WHERE user_id=?", (user["id"],)
+        ).fetchone()
+    video = bool(row and row[0])
+    return {"needs_api_key": not (chat or video)}
+
+
+@app.post("/api/model-settings/verify-and-save")
+async def verify_model_settings(body: ModelSettingsInput, user=Depends(current_user)):
+    result = await model_service.verify_and_save(user["id"], body)
+    audit(user["id"], "model_settings_verified", body.provider)
     return result
 
 

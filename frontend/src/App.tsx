@@ -50,6 +50,7 @@ import type { Analysis, Lesson, System, User } from "./types";
 import ModelSettingsPanel from "./ModelSettingsPanel";
 import VideoLibrary from "./VideoLibrary";
 import SeedanceStudio from "./SeedanceStudio";
+import ApiKeySetup, { resetApiSetupPrompt } from "./ApiKeySetup";
 import ScienceStudio from "./ScienceStudio";
 import VideoDownloads from "./VideoDownloads";
 import AssistantMessage from "./AssistantMessage";
@@ -479,7 +480,9 @@ function UploadModal({
                 disabled={busy}
                 onChange={(e) => setAsrProvider(e.target.value)}
               >
-                <option value="local">本地 Whisper（默认简体中文，音频不出服务器）</option>
+                <option value="local">
+                  本地 Whisper（默认简体中文，音频不出服务器）
+                </option>
                 <option value="iflytek">科大讯飞（云端语音听写）</option>
               </select>
             </label>
@@ -2100,6 +2103,7 @@ export default function App() {
     [filter, setFilter] = useState("all"),
     [toast, setToast] = useState(""),
     [sidebar, setSidebar] = useState(false);
+  const [configurationVersion, setConfigurationVersion] = useState(0);
   const mobile = useMediaQuery("(max-width: 767px)");
   const narrow = useMediaQuery("(max-width: 1199px)");
   const [collapsed, setCollapsed] = useState<boolean | null>(null);
@@ -2276,6 +2280,7 @@ export default function App() {
       <>
         <Login
           onLogin={(u) => {
+            resetApiSetupPrompt(u.id);
             setDemo(false);
             setUser(u);
           }}
@@ -2520,6 +2525,7 @@ export default function App() {
             />
           ) : page === "settings" ? (
             <Settings
+              key={configurationVersion}
               user={user}
               demo={demo}
               notify={notify}
@@ -2530,7 +2536,11 @@ export default function App() {
           ) : page === "downloads" ? (
             <VideoDownloads demo={demo} notify={notify} />
           ) : page === "seedance" ? (
-            <SeedanceStudio demo={demo} notify={notify} />
+            <SeedanceStudio
+              key={configurationVersion}
+              demo={demo}
+              notify={notify}
+            />
           ) : page === "library" ? (
             <VideoLibrary user={user} demo={demo} notify={notify} />
           ) : page === "admin" && user.role === "admin" ? (
@@ -2671,6 +2681,16 @@ export default function App() {
           )}
         </main>
       </div>
+      {!demo && (
+        <ApiKeySetup
+          key={user.id}
+          userId={user.id}
+          onSaved={() => {
+            setConfigurationVersion((n) => n + 1);
+            notify("API Key 验证通过并已加密保存。");
+          }}
+        />
+      )}
       {uploadOpen &&
         (STATIC_DEMO ? (
           <Modal

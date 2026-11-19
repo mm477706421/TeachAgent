@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("cloud ASR requires explicit consent and remains a separate upload choice", async ({
   page,

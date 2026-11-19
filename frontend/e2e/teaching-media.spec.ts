@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("teachers save private science models and use only Seedance video generation", async ({
   page,
 }) => {

@@ -122,10 +122,14 @@ export default function ModelSettingsPanel({
     };
     try {
       if (action === "save") {
-        const data = await api<ModelSettings>("/model-settings", {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
+        const verify = value.provider === "openai" && !clearKey;
+        const data = await api<ModelSettings>(
+          verify ? "/model-settings/verify-and-save" : "/model-settings",
+          {
+            method: verify ? "POST" : "PUT",
+            body: JSON.stringify(payload),
+          },
+        );
         setValue(data);
         if (data.provider === "openai")
           setProfiles((items) => [
@@ -340,6 +344,16 @@ export default function ModelSettingsPanel({
                       </p>
                     </>
                   )}
+                  {selected && (
+                    <a
+                      className="text-btn"
+                      href={selected.apply_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      前往 {selected.name} 申请 API Key ↗
+                    </a>
+                  )}
                   {demo ? (
                     <div className="privacy-note">
                       <ShieldCheck size={21} />
@@ -496,7 +510,7 @@ export default function ModelSettingsPanel({
                   disabled={!!busy || demo}
                 >
                   {busy === "save" && <CircleNotch className="spin" />}
-                  保存模型设置
+                  {busy === "save" ? "正在验证并保存…" : "保存模型设置"}
                 </button>
                 <button
                   className="btn secondary"

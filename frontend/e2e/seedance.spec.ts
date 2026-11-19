@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -18,6 +18,17 @@ test("Seedance settings persist without echoing keys and clear safely", async ({
   test.skip(
     !process.env.TEACHAGENT_E2E_PASSWORD,
     "Requires local test account",
+  );
+  await page.route(
+    "**/api/seedance/settings/verify-and-save",
+    async (route) => {
+      // Browser fixture only; backend tests exercise the actual authorization check.
+      const response = await route.fetch({
+        url: new URL("/api/seedance/settings", route.request().url()).href,
+        method: "PUT",
+      });
+      await route.fulfill({ response });
+    },
   );
   await login(page);
   await page
