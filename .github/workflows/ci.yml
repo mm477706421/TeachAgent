@@ -24,11 +24,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: pip install -r requirements-dev.txt
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Prepare Ubuntu package downloads
+        run: sudo python3 .github/scripts/prepare_apt.py
+      - name: Install media tools
+        timeout-minutes: 8
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: python -m pytest -q
       - run: npm ci && npm run build
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 8
         working-directory: frontend
       - name: Start local server and run browser checks
         env:
@@ -67,11 +72,14 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - name: Prepare Ubuntu package downloads
+        run: sudo python3 .github/scripts/prepare_apt.py
       - run: npm run build:pages
         working-directory: frontend
         env:
           PAGES_BASE_PATH: /TeachAgent/
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 8
         working-directory: frontend
       - run: npm run test:pages
         working-directory: frontend
