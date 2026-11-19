@@ -5,6 +5,8 @@ import json
 import wave
 from pathlib import Path
 
+from .transcript_language import simplify_segments
+
 CHUNK_SECONDS = 60
 
 
@@ -47,7 +49,7 @@ def transcribe_chunks(model, audio, model_signature, progress):
                     and 0 <= saved["completed"] <= count
                 ):
                     completed = saved["completed"]
-                    segments = saved["segments"]
+                    segments = simplify_segments(saved["segments"])
             except (OSError, ValueError, TypeError, KeyError):
                 pass
         progress(completed, count)
@@ -59,7 +61,11 @@ def transcribe_chunks(model, audio, model_signature, progress):
             offset = start_frame / 16000
             end = min(total, start_frame + len(samples)) / 16000
             stream, _ = model.transcribe(
-                samples, language="zh", beam_size=5, vad_filter=True
+                samples,
+                language="zh",
+                beam_size=5,
+                vad_filter=True,
+                initial_prompt="以下是普通话课堂讲解，请使用简体中文。",
             )
             for item in stream:
                 begin = max(offset, min(end, offset + item.start))
@@ -72,6 +78,7 @@ def transcribe_chunks(model, audio, model_signature, progress):
                         "timing": "asr",
                     }
                 )
+            segments = simplify_segments(segments)
             # Commit only a fully consumed chunk, including silence. An interrupted
             # chunk is replayed without duplicating previously committed segments.
             temporary = checkpoint.with_suffix(".tmp")

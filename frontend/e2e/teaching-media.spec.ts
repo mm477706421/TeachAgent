@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("teachers save private science models and configure their local workflow", async ({
+test("teachers save private science models and use only Seedance video generation", async ({
   page,
 }) => {
   test.skip(!process.env.TEACHAGENT_E2E_PASSWORD, "Requires test account");
@@ -26,20 +26,14 @@ test("teachers save private science models and configure their local workflow", 
   await card.getByRole("button", { name: "确认删除模型" }).click();
   await expect(card).toHaveCount(0);
   await page.getByRole("button", { name: "教学视频生成", exact: true }).click();
-  await page.getByLabel("视频生成算力").selectOption("comfyui");
-  await page.getByLabel("ComfyUI 服务地址").fill("http://127.0.0.1:8188");
-  await page
-    .getByLabel("API 工作流 JSON")
-    .fill(
-      JSON.stringify({
-        "1": { class_type: "ExampleOnly", inputs: { text: "__PROMPT__" } },
-      }),
-    );
-  await page.getByRole("button", { name: "保存本地算力设置" }).click();
-  await expect(page.locator(".toast")).toContainText("本地算力配置已保存");
+  await expect(
+    page.getByRole("heading", { name: "连接 Seedance" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("视频生成算力")).toHaveCount(0);
+  await expect(page.getByText(/ComfyUI/)).toHaveCount(0);
   await expect(
     page.getByRole("checkbox", {
-      name: /我同意将描述发送至自己配置的本地算力服务/,
+      name: /我同意将提示词发送至 Seedance/,
     }),
   ).not.toBeChecked();
 });

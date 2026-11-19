@@ -246,6 +246,9 @@ def process(lesson_id):
                 ),
             )
         update(lesson_id, progress=90, stage="正在蒸馏话语与生成教学画像")
+        from .transcript_language import simplify_segments
+
+        segments = simplify_segments(segments)
         result = analyze(segments, duration)
         result["asr_provider"] = provider
         if provider == "iflytek":

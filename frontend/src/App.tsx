@@ -479,7 +479,7 @@ function UploadModal({
                 disabled={busy}
                 onChange={(e) => setAsrProvider(e.target.value)}
               >
-                <option value="local">本地 Whisper（音频不出服务器）</option>
+                <option value="local">本地 Whisper（默认简体中文，音频不出服务器）</option>
                 <option value="iflytek">科大讯飞（云端语音听写）</option>
               </select>
             </label>

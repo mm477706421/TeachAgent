@@ -43,7 +43,6 @@ from . import (
     iflytek_asr,
     library,
     seedance,
-    local_video,
     video_downloads,
     simulations,
 )
@@ -67,7 +66,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="TeachAgent Local API",
-    version="1.6.1",
+    version="1.6.2",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -86,7 +85,6 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
         (
             "/api/model-settings",
             "/api/seedance",
-            "/api/local-video",
             "/api/video-downloads",
         )
     ):
@@ -837,7 +835,6 @@ def audit_log(user=Depends(admin)):
 
 app.include_router(library.router_for(current_user))
 app.include_router(seedance.router_for(current_user))
-app.include_router(local_video.router_for(current_user))
 app.include_router(video_downloads.router_for(current_user))
 app.include_router(simulations.router_for(current_user))
 

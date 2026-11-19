@@ -7,7 +7,6 @@ import pytest
 
 from backend import (
     config,
-    local_video,
     model_service,
     seedance,
     video_downloads,
@@ -24,116 +23,103 @@ def no_workers(monkeypatch):
     monkeypatch.setattr(video_downloads, "worker", idle)
 
 
-def test_local_compute_configuration_submission_and_result(clients, monkeypatch):
+def test_retired_video_endpoints_are_removed(clients):
+    c, _ = clients
+    for method, path in [
+        ("get", "/api/local-video/settings"),
+        ("put", "/api/local-video/settings"),
+        ("post", "/api/local-video/videos"),
+    ]:
+        assert getattr(c["alice"], method)(path).status_code in (404, 405)
+
+
+def test_legacy_media_preserved_and_never_sent_to_seedance(clients, monkeypatch):
     c, ids = clients
-    workflow = {
-        "1": {
-            "class_type": "TextEncode",
-            "inputs": {
-                "text": "__PROMPT__",
-                "frames": "__FRAMES__",
-                "width": "__WIDTH__",
-            },
-        }
-    }
-    r = c["alice"].put(
-        "/api/local-video/settings",
-        json={
-            "base_url": "http://gpu.school:8188",
-            "workflow": json.dumps(workflow),
-            "api_key": "teacher-local-test",
-        },
-    )
-    assert r.status_code == 200 and r.json()["configured"]
-    assert "teacher-local-test" not in r.text
-    assert not c["bob"].get("/api/local-video/settings").json()["configured"]
-    r = c["alice"].put(
-        "/api/local-video/settings",
-        json={
-            "base_url": "http://gpu.school:8188",
-            "workflow": "{}",
-            "api_key": "do-not-echo",
-        },
-    )
-    assert r.status_code == 422 and "do-not-echo" not in r.text
-    calls = []
 
-    async def request(base, key, method, path, payload=None):
-        calls.append((method, path))
-        assert base == "http://gpu.school:8188"
-        if method == "POST":
-            assert payload["prompt"]["1"]["inputs"]["frames"] == 81
-            assert payload["prompt"]["1"]["inputs"]["width"] == 832
-            return {"prompt_id": "local-job-123"}
-        return {
-            "local-job-123": {
-                "status": {"completed": True},
-                "outputs": {
-                    "8": {
-                        "gifs": [
-                            {"filename": "class.mp4", "type": "output", "subfolder": ""}
-                        ]
-                    }
-                },
-            }
-        }
+    async def forbidden(*args, **kwargs):
+        pytest.fail("Retired provider reached Seedance")
 
-    monkeypatch.setattr(local_video, "request", request)
-    body = {
-        "request_id": str(uuid.uuid4()),
-        "title": "历史故事",
-        "prompt": "依据课堂材料生成一个历史故事片段。",
-        "allow_external": True,
-    }
-    r = c["alice"].post("/api/local-video/videos", json=body)
-    assert r.status_code == 201 and r.json()["provider"] == "comfyui"
-    vid = r.json()["id"]
-    assert c["alice"].post("/api/local-video/videos", json=body).json()["id"] == vid
-    assert len(calls) == 1
+    monkeypatch.setattr(seedance, "provider", forbidden)
     content = (
         config.ROOT / "frontend/e2e-shared/fixtures/library-sample.mp4"
     ).read_bytes()
+    video_ids = []
+    with connect() as db:
+        for status in [
+            "succeeded",
+            "running",
+            "download_failed",
+            "attention",
+            "submitting",
+        ]:
+            vid = uuid.uuid4().hex
+            video_ids.append(vid)
+            db.execute(
+                "INSERT INTO generated_videos "
+                "(id,user_id,title,prompt,model,ratio,duration,status,remote_id,api_key,created,updated,provider) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    vid,
+                    ids["alice"],
+                    "历史视频",
+                    "描述",
+                    "old",
+                    "16:9",
+                    5,
+                    status,
+                    "legacy-remote-id",
+                    "legacy-key",
+                    1,
+                    1,
+                    "comfyui",
+                ),
+            )
+    path = seedance.folder(ids["alice"], video_ids[0]) / "video.mp4"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    for vid in video_ids:
+        asyncio.run(seedance.refresh_task(seedance.owned(vid, ids["alice"], True)))
+        assert (
+            c["alice"].post(f"/api/seedance/videos/{vid}/retry-download").status_code
+            == 409
+        )
 
-    async def download(row, media, path):
-        assert media["filename"] == "class.mp4"
-        path.parent.mkdir(parents=True)
-        path.write_bytes(content)
-        return len(content)
+    assert (
+        c["alice"]
+        .post(
+            "/api/seedance/videos",
+            json={
+                "request_id": str(uuid.UUID(video_ids[0])),
+                "title": "新任务",
+                "prompt": "依据课堂内容生成一段教学视频。",
+                "allow_external": True,
+            },
+        )
+        .status_code
+        == 409
+    )
 
-    monkeypatch.setattr(local_video, "download", download)
-    asyncio.run(seedance.refresh_task(seedance.owned(vid, ids["alice"], True)))
+    async def restart():
+        async with seedance.lifecycle():
+            pass
+
+    asyncio.run(restart())
+    for vid in video_ids[1:]:
+        row = seedance.owned(vid, ids["alice"], True)
+        assert row["status"] == "failed" and row["api_key"] == ""
+    vid = video_ids[0]
     assert (
         c["alice"].get(f"/api/seedance/videos/{vid}/media?download=true").content
         == content
     )
     assert c["bob"].get(f"/api/seedance/videos/{vid}/media").status_code == 404
-    assert seedance.owned(vid, ids["alice"], True)["api_key"] == ""
-    c["alice"].put(
-        "/api/local-video/settings",
-        json={"base_url": "http://other-gpu:8188", "workflow": json.dumps(workflow)},
+    assert (
+        c["alice"]
+        .patch(f"/api/seedance/videos/{vid}", json={"title": "保留的视频"})
+        .status_code
+        == 200
     )
-    assert not c["alice"].get("/api/local-video/settings").json()["api_key_configured"]
-
-
-def test_workflow_binding_is_json_data_and_download_paths_are_restricted(tmp_path):
-    body = seedance.Generation(
-        request_id=uuid.uuid4(),
-        title="story",
-        prompt='课程故事中的文字 "quote" 和 \\ 保持原样',
-        duration=10,
-    )
-    result = local_video.expand(
-        json.dumps({"1": {"inputs": {"text": "__PROMPT__", "frames": "__FRAMES__"}}}),
-        body,
-    )
-    assert result["1"]["inputs"]["text"] == body.prompt
-    assert result["1"]["inputs"]["frames"] == 161
-    with pytest.raises(ValueError):
-        asyncio.run(
-            local_video.download(
-                {}, {"filename": "../../secret.mp4"}, tmp_path / "output.mp4"
-            )
-        )
+    assert c["alice"].delete(f"/api/seedance/videos/{vid}").status_code == 200
 
 
 def test_download_queue_private_management_and_media_validation(clients, monkeypatch):

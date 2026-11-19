@@ -157,7 +157,7 @@ def test_cloud_pipeline_without_local_model_and_retry(
             {
                 "start": 0,
                 "end": 2,
-                "text": "今天我们学习，谁来解释？",
+                "text": "今天我們學習，誰來解釋？",
                 "timing": "chunk",
             }
         ]
@@ -179,6 +179,7 @@ def test_cloud_pipeline_without_local_model_and_retry(
     assert result["status"] == "completed"
     assert result["analysis"]["asr_provider"] == "iflytek"
     assert result["analysis"]["segments"][0]["timing"] == "chunk"
+    assert result["analysis"]["segments"][0]["text"] == "今天我们学习，谁来解释？"
     assert "8 秒" in result["analysis"]["limitations"][-1]
     assert len(calls) == 1
 

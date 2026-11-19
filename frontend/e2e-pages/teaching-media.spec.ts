@@ -87,7 +87,7 @@ test("science demo animates synchronized parameters and exports a functioning of
   expect(requests).toEqual([]);
 });
 
-test("URL download and story/local-compute demos never submit requests", async ({
+test("URL download and Seedance story demos never submit requests", async ({
   page,
 }) => {
   const requests: string[] = [];
@@ -115,9 +115,10 @@ test("URL download and story/local-compute demos never submit requests", async (
   await expect(page.getByLabel("画面描述", { exact: true })).toHaveValue(
     /守株待兔/,
   );
-  await page.getByLabel("视频生成算力").selectOption("comfyui");
+  await expect(page.getByLabel("视频生成算力")).toHaveCount(0);
+  await expect(page.getByText(/ComfyUI/)).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "连接自己的本地算力" }),
+    page.getByRole("heading", { name: "连接 Seedance" }),
   ).toBeVisible();
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
   expect(requests).toEqual([]);

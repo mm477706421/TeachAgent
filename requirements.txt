@@ -9,3 +9,4 @@ faster-whisper==1.1.1
 requests==2.34.2
 python-docx==1.2.0
 websockets==15.0.1
+opencc-python-reimplemented==0.1.7

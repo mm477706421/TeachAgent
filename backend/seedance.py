@@ -182,15 +182,11 @@ async def download_media(url, destination):
 
 
 async def refresh_task(row):
-    from . import local_video
-
-    local = row.get("provider") == "comfyui"
+    # Historical media stays accessible; retired providers must never reach Seedance.
+    if row.get("provider", "seedance") != "seedance":
+        return
     try:
-        data = (
-            await local_video.poll(row)
-            if local
-            else await provider("GET", row["api_key"], row["remote_id"])
-        )
+        data = await provider("GET", row["api_key"], row["remote_id"])
         status = data.get("status")
         if status in ("queued", "running"):
             update(row["id"], status=status, error="")
@@ -198,13 +194,7 @@ async def refresh_task(row):
             update(row["id"], status="downloading", error="")
             try:
                 size = await asyncio.wait_for(
-                    local_video.download(
-                        row,
-                        data["content"]["local_media"],
-                        folder(row["user_id"], row["id"]) / "video.mp4",
-                    )
-                    if local
-                    else download_media(
+                    download_media(
                         data["content"]["video_url"],
                         folder(row["user_id"], row["id"]) / "video.mp4",
                     ),
@@ -235,11 +225,7 @@ async def refresh_task(row):
         update(
             row["id"],
             **({"status": "attention"} if pause else {}),
-            error=(
-                "本地算力服务暂时无法访问，请检查 ComfyUI 地址、认证和工作流输出。"
-                if local
-                else provider_error(exc)
-            )
+            error=provider_error(exc)
             + (" 自动查询已暂停；修正设置后可重新查询原任务。" if pause else ""),
         )
 
@@ -249,7 +235,7 @@ async def worker():
         try:
             with connect() as db:
                 rows = db.execute(
-                    "SELECT * FROM generated_videos WHERE status IN ('queued','running','downloading') ORDER BY updated LIMIT 4"
+                    "SELECT * FROM generated_videos WHERE provider='seedance' AND status IN ('queued','running','downloading') ORDER BY updated LIMIT 4"
                 ).fetchall()
             await asyncio.gather(*(refresh_task(dict(row)) for row in rows))
         except Exception as exc:  # noqa: BLE001 - durable queue must survive transient faults
@@ -264,7 +250,12 @@ async def worker():
 async def lifecycle():
     with connect() as db:
         db.execute(
-            "UPDATE generated_videos SET status='unknown',error='提交时服务中断，是否计费未知。请先核对方舟控制台，勿直接重复生成。' WHERE status='submitting'"
+            "UPDATE generated_videos SET status='unknown',error='提交时服务中断，是否计费未知。请先核对方舟控制台，勿直接重复生成。' WHERE provider='seedance' AND status='submitting'"
+        )
+        db.execute(
+            "UPDATE generated_videos SET status='failed', api_key='', "
+            "error='原视频生成服务已停用，请使用 Seedance 创建新任务。' "
+            "WHERE provider != 'seedance' AND status NOT IN ('succeeded','failed')"
         )
     task = asyncio.create_task(worker())
     try:
@@ -339,10 +330,10 @@ def router_for(current_user):
         with connect() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
-                "SELECT user_id FROM generated_videos WHERE id=?", (video_id,)
+                "SELECT user_id,provider FROM generated_videos WHERE id=?", (video_id,)
             ).fetchone()
             if existing:
-                if existing[0] != user["id"]:
+                if existing[0] != user["id"] or existing[1] != "seedance":
                     raise HTTPException(409, "请求编号冲突，请刷新重试")
                 return owned(video_id, user["id"])
             setting = db.execute(
@@ -416,16 +407,15 @@ def router_for(current_user):
                 "SELECT * FROM generated_videos WHERE id=? AND user_id=?",
                 (video_id, user["id"]),
             ).fetchone()
+            if row and row["provider"] != "seedance":
+                raise HTTPException(409, "原视频生成服务已停用；已保存的成片仍可下载")
             if row and row["status"] == "attention":
-                local = row["provider"] == "comfyui"
                 setting = db.execute(
-                    "SELECT api_key FROM local_video_settings WHERE user_id=? AND base_url=?"
-                    if local
-                    else "SELECT api_key FROM seedance_settings WHERE user_id=?",
-                    (user["id"], row["base_url"]) if local else (user["id"],),
+                    "SELECT api_key FROM seedance_settings WHERE user_id=?",
+                    (user["id"],),
                 ).fetchone()
-                if not setting or (not local and not setting[0]):
-                    raise HTTPException(400, "请先配置该任务原服务地址的有效凭据")
+                if not setting or not setting[0]:
+                    raise HTTPException(400, "请先配置有效的 Seedance 凭据")
                 db.execute(
                     "UPDATE generated_videos SET api_key=? WHERE id=?",
                     (setting[0], video_id),

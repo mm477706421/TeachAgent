@@ -23,6 +23,8 @@ class Model:
         self.fail = fail
 
     def transcribe(self, samples, **kwargs):
+        assert kwargs["language"] == "zh"
+        assert "简体中文" in kwargs["initial_prompt"]
         assert samples.dtype == np.float32
         assert len(samples) <= 60 * 16000
         self.lengths.append(len(samples))
@@ -87,3 +89,36 @@ def test_silent_chunks_checkpoint_and_invalid_pcm(tmp_path):
         f.writeframes(b"\x00" * 64000)
     with pytest.raises(ValueError, match="PCM16"):
         transcribe_chunks(Silent(), audio, "model", lambda *_: None)
+
+
+def test_simplified_output_and_traditional_checkpoint_resume(tmp_path):
+    from backend.transcript_language import simplify_segments
+
+    original = [
+        {
+            "start": 1.2,
+            "end": 3.4,
+            "text": "課堂學習：電壓與電流，F=ma，OpenAI 123。",
+            "timing": "asr",
+        }
+    ]
+    normalized = simplify_segments(original)
+    assert normalized == [
+        {**original[0], "text": "课堂学习：电压与电流，F=ma，OpenAI 123。"}
+    ]
+    assert original[0]["text"].startswith("課堂")
+    audio = audio_file(tmp_path, 2)
+
+    class Traditional(Model):
+        def transcribe(self, samples, **kwargs):
+            super().transcribe(samples, **kwargs)
+            return iter([SimpleNamespace(start=1, end=2, text="課堂學習")]), None
+
+    result = transcribe_chunks(Traditional(), audio, "model", lambda *_: None)
+    assert result[0]["text"] == "课堂学习"
+    checkpoint = tmp_path / "asr-checkpoint.json"
+    saved = json.loads(checkpoint.read_text(encoding="utf8"))
+    assert saved["segments"][0]["text"] == "课堂学习"
+    saved["segments"][0]["text"] = "課堂學習"
+    checkpoint.write_text(json.dumps(saved), encoding="utf8")
+    assert transcribe_chunks(Model(fail=1), audio, "model", lambda *_: None) == result
