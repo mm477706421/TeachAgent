@@ -39,6 +39,11 @@ def run_command(args, timeout=900):
         timeout=timeout,
     )
     if result.returncode:
+        logger.error(
+            "Media process failed (exit %s): %s",
+            result.returncode,
+            result.stderr[-4000:],
+        )
         raise ValueError(
             "媒体处理失败，请检查视频是否损坏、是否有音轨，以及 FFmpeg 是否完整安装。"
         )
@@ -119,6 +124,10 @@ def process(lesson_id):
         run_command(
             [
                 config.FFMPEG,
+                "-threads",
+                "2",
+                "-filter_threads",
+                "1",
                 "-nostdin",
                 "-y",
                 "-v",
@@ -129,6 +138,8 @@ def process(lesson_id):
                 f"fps=1/{max(30, duration / 60)},scale=640:-2",
                 "-frames:v",
                 "60",
+                "-threads",
+                "1",
                 str(frames / "%03d.jpg"),
             ]
         )
@@ -137,6 +148,10 @@ def process(lesson_id):
             run_command(
                 [
                     config.FFMPEG,
+                    "-threads",
+                    "2",
+                    "-filter_threads",
+                    "1",
                     "-nostdin",
                     "-y",
                     "-v",
@@ -147,6 +162,8 @@ def process(lesson_id):
                     "scale=640:-2",
                     "-frames:v",
                     "1",
+                    "-threads",
+                    "1",
                     str(frames / "001.jpg"),
                 ]
             )
@@ -155,6 +172,10 @@ def process(lesson_id):
         run_command(
             [
                 config.FFMPEG,
+                "-threads",
+                "2",
+                "-filter_threads",
+                "1",
                 "-nostdin",
                 "-y",
                 "-v",
@@ -168,6 +189,8 @@ def process(lesson_id):
                 "1",
                 "-ar",
                 "16000",
+                "-threads",
+                "1",
                 str(audio),
             ]
         )

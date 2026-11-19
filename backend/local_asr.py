@@ -5,8 +5,6 @@ import json
 import wave
 from pathlib import Path
 
-import numpy as np
-
 CHUNK_SECONDS = 60
 
 
@@ -19,6 +17,8 @@ def fingerprint(path):
 
 
 def transcribe_chunks(model, audio, model_signature, progress):
+    import numpy as np
+
     audio = Path(audio)
     checkpoint = audio.with_name("asr-checkpoint.json")
     identity = {
