@@ -3,9 +3,11 @@ import logging
 import subprocess
 import threading
 from concurrent.futures import ThreadPoolExecutor
+
 from . import config
 from .analysis import analyze
 from .db import connect
+from .local_asr import transcribe_chunks
 
 logger = logging.getLogger(__name__)
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="local-asr")
@@ -29,6 +31,7 @@ def update(lesson_id, **fields):
 def run_command(args, timeout=900):
     result = subprocess.run(
         args,
+        check=False,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -159,6 +162,8 @@ def process(lesson_id):
                 "-i",
                 str(video),
                 "-vn",
+                "-c:a",
+                "pcm_s16le",
                 "-ac",
                 "1",
                 "-ar",
@@ -191,23 +196,28 @@ def process(lesson_id):
                     device=config.ASR_DEVICE,
                     compute_type=config.ASR_COMPUTE,
                     local_files_only=True,
+                    cpu_threads=2,
+                    num_workers=1,
                 )
-            stream, _ = _model.transcribe(
-                str(audio), language="zh", beam_size=5, vad_filter=True
+            model_signature = {
+                "path": str(config.MODEL),
+                "compute": config.ASR_COMPUTE,
+                "files": {
+                    name: [p.stat().st_size, p.stat().st_mtime_ns]
+                    for name in ("model.bin", "config.json", "tokenizer.json")
+                    if (p := config.MODEL / name).is_file()
+                },
+            }
+            segments = transcribe_chunks(
+                _model,
+                audio,
+                model_signature,
+                lambda done, total: update(
+                    lesson_id,
+                    progress=min(85, 35 + int(done / max(total, 1) * 50)),
+                    stage=f"Whisper 本地分段转写：{done}/{total} 段（每段 60 秒）",
+                ),
             )
-            segments = []
-            for s in stream:
-                segments.append(
-                    {
-                        "start": round(s.start, 2),
-                        "end": round(s.end, 2),
-                        "text": s.text,
-                        "timing": "asr",
-                    }
-                )
-                update(
-                    lesson_id, progress=min(85, 35 + int(s.end / max(duration, 1) * 50))
-                )
         update(lesson_id, progress=90, stage="正在蒸馏话语与生成教学画像")
         result = analyze(segments, duration)
         result["asr_provider"] = provider
